@@ -1,255 +1,234 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Animated, Easing, PermissionsAndroid,
-    Platform, } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import Feather from 'react-native-vector-icons/Feather';
-import AudioRecorderPlayer from 'react-native-audio-recorder-player';
-import RNFS from 'react-native-fs';
-import axios from 'axios';
+import { Component } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  TouchableHighlight,
+} from 'react-native';
 
-const audioRecorderPlayer = AudioRecorderPlayer;
+import Voice, {
+  type SpeechRecognizedEvent,
+  type SpeechResultsEvent,
+  type SpeechErrorEvent,
+} from '@react-native-voice/voice';
 
-function EqualizerBars({ visible }: { visible: boolean }) {
-  const BAR_COUNT = 40;
-  const phase = useRef(new Animated.Value(0)).current;
+type Props = {};
+type State = {
+  recognized: string;
+  pitch: string;
+  error: string;
+  end: string;
+  started: string;
+  results: string[];
+  partialResults: string[];
+};
 
-  useEffect(() => {
-    if (visible) {
-      Animated.loop(
-        Animated.timing(phase, {
-          toValue: 2 * Math.PI,
-          duration: 1200,
-          useNativeDriver: false,
-          easing: Easing.linear,
-        })
-      ).start();
-    } else {
-      phase.stopAnimation();
-    }
-  }, [visible, phase]);
-
-  if (!visible) return null;
-
-  return (
-    <View style={eqStyles.container}>
-      {Array.from({ length: BAR_COUNT }).map((_, i) => {
-        const barPhase = (i / BAR_COUNT) * 2 * Math.PI;
-        const height = phase.interpolate({
-          inputRange: [0, 2 * Math.PI],
-          outputRange: [18 + 18 * Math.sin(barPhase), 18 + 18 * Math.sin(barPhase + 2 * Math.PI)],
-        });
-        return (
-          <Animated.View
-            key={i}
-            style={[
-              eqStyles.bar,
-              { height }
-            ]}
-          />
-        );
-      })}
-    </View>
-  );
-}
-
-const eqStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    gap: 2,
-    marginBottom: 12,
-  },
-  bar: {
-    width: 4,
-    borderRadius: 2,
-    backgroundColor: '#38bdf8',
-    marginHorizontal: 1,
-  },
-});
-
-export default function ChatHome() {
- // const [recording, setRecording] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const audioPath = useRef(
-    Platform.select({
-      ios: `${RNFS.DocumentDirectoryPath}/record.m4a`,
-      android: `${RNFS.DocumentDirectoryPath}/record.mp4`,
-    })
-  ).current;
-
-  const requestPermissions = async () => {
-    if (Platform.OS === 'android') {
-      await PermissionsAndroid.requestMultiple([
-        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-        PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-      ]);
-    }
+class ChatHome extends Component<Props, State> {
+  state = {
+    recognized: '',
+    pitch: '',
+    error: '',
+    end: '',
+    started: '',
+    results: [],
+    partialResults: [],
   };
 
-  const startRecording = async () => {
-    await requestPermissions();
-    setRecording(true);
-    await audioRecorderPlayer.startRecorder(audioPath);
-  };
+  constructor(props: Props) {
+    super(props);
+    Voice.onSpeechStart = this.onSpeechStart;
+    Voice.onSpeechRecognized = this.onSpeechRecognized;
+    Voice.onSpeechEnd = this.onSpeechEnd;
+    Voice.onSpeechError = this.onSpeechError;
+    Voice.onSpeechResults = this.onSpeechResults;
+    Voice.onSpeechPartialResults = this.onSpeechPartialResults;
+    Voice.onSpeechVolumeChanged = this.onSpeechVolumeChanged;
+  }
 
-  const stopRecording = async () => {
-    const result = await audioRecorderPlayer.stopRecorder();
-    setRecording(false);
-    uploadToWhisper(result);
-  };
+  componentWillUnmount() {
+    Voice.destroy().then(Voice.removeAllListeners);
+  }
 
-  const uploadToWhisper = async (filePath) => {
-    const formData = new FormData();
-    formData.append('file', {
-      uri: `file://${filePath}`,
-      type: 'audio/mp4',
-      name: 'audio.mp4',
+  onSpeechStart = (e: any) => {
+    console.log('onSpeechStart: ', e);
+    this.setState({
+      started: '√',
     });
-    formData.append('model', 'whisper-1');
-    console.log('url--',filePath)
+  };
+
+  onSpeechRecognized = (e: SpeechRecognizedEvent) => {
+    console.log('onSpeechRecognized: ', e);
+    this.setState({
+      recognized: '√',
+    });
+  };
+
+  onSpeechEnd = (e: any) => {
+    console.log('onSpeechEnd: ', e);
+    this.setState({
+      end: '√',
+    });
+  };
+
+  onSpeechError = (e: SpeechErrorEvent) => {
+    console.log('onSpeechError: ', e);
+    this.setState({
+      error: JSON.stringify(e.error),
+    });
+  };
+
+  onSpeechResults = (e: SpeechResultsEvent) => {
+    console.log('onSpeechResults: ', e);
+    this.setState({
+      results: e.value && e.value?.length > 0 ? e.value : [],
+    });
+  };
+
+  onSpeechPartialResults = (e: SpeechResultsEvent) => {
+    console.log('onSpeechPartialResults: ', e);
+    this.setState({
+      partialResults: e.value && e.value?.length > 0 ? e.value : [],
+    });
+  };
+
+  onSpeechVolumeChanged = (e: any) => {
+    console.log('onSpeechVolumeChanged: ', e);
+    this.setState({
+      pitch: e.value,
+    });
+  };
+
+  _startRecognizing = async () => {
+    this.setState({
+      recognized: '',
+      pitch: '',
+      error: '',
+      started: '',
+      results: [],
+      partialResults: [],
+      end: '',
+    });
+
     try {
-        const res = await axios.post(
-            'http://<YOUR_LOCAL_IP>:3001/transcribe',
-            formData,
-            {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            }
-          );
-      const text = res.data.text;
-      addMessage(text, 'user');
-      fakeAIResponse(text);
-    } catch (err) {
-      console.error('Whisper API error:', err);
+      await Voice.start('en-US');
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  const addMessage = (text, role) => {
-    setMessages((prev) => [...prev, { text, role }]);
+  _stopRecognizing = async () => {
+    try {
+      await Voice.stop();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const fakeAIResponse = (userText) => {
-    setTimeout(() => {
-      addMessage(`You said: "${userText}"`, 'ai');
-    }, 1500);
+  _cancelRecognizing = async () => {
+    try {
+      await Voice.cancel();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  // Example: toggle recording for demo
-  // Remove this and use your real recording logic
-  useEffect(() => {
-    startRecording();
-  }, []);
+  _destroyRecognizer = async () => {
+    try {
+      await Voice.destroy();
+    } catch (e) {
+      console.error(e);
+    }
+    this.setState({
+      recognized: '',
+      pitch: '',
+      error: '',
+      started: '',
+      results: [],
+      partialResults: [],
+      end: '',
+    });
+  };
 
-  return (
-    <LinearGradient
-      colors={['#111', '#1a237e', '#1976d2']}
-      style={styles.gradient}
-    >
-      <SafeAreaView style={{ flex: 1 }}>
-        {/* Top Bar */}
-        <View style={styles.topBar}>
-          <View style={{ flex: 1 }} />
-          <View style={styles.liveContainer}>
-            <Feather name="activity" size={16} color="#fff" />
-            <Text style={styles.liveText}>Live</Text>
-          </View>
-          <TouchableOpacity style={styles.topIcon}>
-            <Feather name="video-off" size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Animated Equalizer only while recording */}
-        <View style={styles.equalizerBarContainer}>
-          <EqualizerBars visible={recording} />
-        </View>
-
-        {/* Bottom Controls */}
-        <View style={styles.bottomBar}>
-          <View style={styles.controlsContainer}>
-            <TouchableOpacity style={styles.controlButton}>
-              <Feather name="video" size={24} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.controlButton}>
-              <Feather name="upload" size={24} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.controlButton}>
-              <Feather name="pause" size={24} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.controlButton, styles.endButton]} onPress={recording ? stopRecording : startRecording}>
-              <Feather name="x" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
-    </LinearGradient>
-  );
+  render() {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.welcome}>Welcome to React Native Voice!</Text>
+        <Text style={styles.instructions}>
+          Press the button and start speaking.
+        </Text>
+        <Text style={styles.stat}>{`Started: ${this.state.started}`}</Text>
+        <Text style={styles.stat}>{`Recognized: ${
+          this.state.recognized
+        }`}</Text>
+        <Text style={styles.stat}>{`Pitch: ${this.state.pitch}`}</Text>
+        <Text style={styles.stat}>{`Error: ${this.state.error}`}</Text>
+        <Text style={styles.stat}>Results</Text>
+        {this.state.results.map((result, index) => {
+          return (
+            <Text key={`result-${index}`} style={styles.stat}>
+              {result}
+            </Text>
+          );
+        })}
+        <Text style={styles.stat}>Partial Results</Text>
+        {this.state.partialResults.map((result, index) => {
+          return (
+            <Text key={`partial-result-${index}`} style={styles.stat}>
+              {result}
+            </Text>
+          );
+        })}
+        <Text style={styles.stat}>{`End: ${this.state.end}`}</Text>
+        <TouchableHighlight onPress={this._startRecognizing}>
+        <Text style={styles.action}> Start Recording</Text>
+        </TouchableHighlight>
+        <TouchableHighlight onPress={this._stopRecognizing}>
+          <Text style={styles.action}>Stop Recognizing</Text>
+        </TouchableHighlight>
+        <TouchableHighlight onPress={this._cancelRecognizing}>
+          <Text style={styles.action}>Cancel</Text>
+        </TouchableHighlight>
+        <TouchableHighlight onPress={this._destroyRecognizer}>
+          <Text style={styles.action}>Destroy</Text>
+        </TouchableHighlight>
+      </View>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
-  gradient: {
+  button: {
+    width: 50,
+    height: 50,
+  },
+  container: {
     flex: 1,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    marginHorizontal: 16,
-  },
-  liveContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 6,
-  },
-  liveText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginLeft: 4,
-    fontSize: 16,
-  },
-  topIcon: {
-    alignSelf: 'flex-end',
-  },
-  equalizerBarContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 110,
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 32,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  controlsContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(30,30,40,0.8)',
-    borderRadius: 32,
-    padding: 12,
-    gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  controlButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#222b',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 4,
+    backgroundColor: '#F5FCFF',
   },
-  endButton: {
-    backgroundColor: '#e53935',
+  welcome: {
+    fontSize: 20,
+    textAlign: 'center',
+    margin: 10,
+  },
+  action: {
+    textAlign: 'center',
+    color: '#0000FF',
+    marginVertical: 5,
+    fontWeight: 'bold',
+  },
+  instructions: {
+    textAlign: 'center',
+    color: '#333333',
+    marginBottom: 5,
+  },
+  stat: {
+    textAlign: 'center',
+    color: '#B0171F',
+    marginBottom: 1,
   },
 });
+
+export default ChatHome;

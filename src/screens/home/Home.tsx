@@ -3,15 +3,17 @@ import { View, StyleSheet, Image, Dimensions } from 'react-native';
 import { Text, Button, Card } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import VoiceButton from '../../components/VoiceButton';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 const Home: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={styles.container}>
+      
       <Text style={styles.title}>👋 Welcome Back!</Text>
       <Text style={styles.subtitle}>Let’s track your wellness journey</Text>
-
+      <VoiceButton />
       <Card style={styles.card}>
         <View style={styles.buttonWrapper}>
           <Button
@@ -41,14 +43,14 @@ const Home: React.FC<Props> = ({ navigation }) => {
             🚶 Activity
           </Button>
 
-          <Button
+          {/* <Button
             mode="contained"
             onPress={() => navigation.navigate('ChatHome')}
             style={[styles.button, { backgroundColor: '#7c3aed' }]}
             labelStyle={styles.buttonLabel}
           >
             💬 AI Chat
-          </Button>
+          </Button> */}
         </View>
       </Card>
     </View>
