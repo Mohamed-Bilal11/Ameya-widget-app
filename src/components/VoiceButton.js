@@ -11,6 +11,7 @@ export default function VoiceButton() {
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [speechTimeout, setSpeechTimeout] = useState(null);
 
   const navigation = useNavigation();
 
@@ -20,10 +21,20 @@ export default function VoiceButton() {
     return () => {
       resultListener.remove();
       errorListener.remove();
+      // Clear any pending timeout
+      if (speechTimeout) {
+        clearTimeout(speechTimeout);
+      }
     };
-  }, []);
+  }, [speechTimeout]);
 
   const onSpeechResultsHandler = (result) => {
+    // Clear the timeout since we got a result
+    if (speechTimeout) {
+      clearTimeout(speechTimeout);
+      setSpeechTimeout(null);
+    }
+    
     setLoading(false);
     setRecording(false);
     let text = '';
@@ -35,6 +46,10 @@ export default function VoiceButton() {
       text = result[0];
     }
     if (!text) return;
+    
+    // Debug logging
+    console.log('🎤 Speech recognized:', text);
+    
     // Navigation logic based on recognized text
     const lower = text.toLowerCase();
     if (lower.includes('food')) {
@@ -49,6 +64,12 @@ export default function VoiceButton() {
   };
 
   const onSpeechErrorHandler = (error) => {
+    // Clear the timeout since we got an error
+    if (speechTimeout) {
+      clearTimeout(speechTimeout);
+      setSpeechTimeout(null);
+    }
+    
     setLoading(false);
     setRecording(false);
     console.log('Speech error:', error);
@@ -57,10 +78,26 @@ export default function VoiceButton() {
   const onStartRecord = async () => {
     setLoading(true);
     setRecording(true);
+    
+    // Set a timeout to reset loading state if no speech is detected
+    const timeout = setTimeout(() => {
+      console.log('⏰ Speech timeout - no speech detected');
+      setLoading(false);
+      setRecording(false);
+      setSpeechTimeout(null);
+    }, 10000); // 10 seconds timeout
+    
+    setSpeechTimeout(timeout);
     await SpeechAPI.startListening();
   };
 
   const onStopRecord = async () => {
+    // Clear the timeout since user manually stopped
+    if (speechTimeout) {
+      clearTimeout(speechTimeout);
+      setSpeechTimeout(null);
+    }
+    
     setLoading(false);
     setRecording(false);
     await SpeechAPI.stopListening();
