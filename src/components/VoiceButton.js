@@ -51,28 +51,40 @@ export default function VoiceButton() {
 
   const handleNavigation = (text) => {
     console.log('🧭 Navigation called with text:', text);
-    if (!text) {
+    if (!text || text.trim() === '') {
       console.log('🧭 No text provided, navigating to Home');
       navigation.navigate('Home');
-      // Reset text area after navigation
       setTranscription('');
       return;
     }
     
-    const lower = text.toLowerCase();
+    const lower = text.toLowerCase().trim();
     console.log('🧭 Processing text:', lower);
+    console.log('🧭 Text length:', lower.length);
     
-    if (lower.includes('food')) {
+    // Check for keywords with better detection (including variations)
+    const hasFood = lower.includes('food') || lower.includes('meal') || lower.includes('eat') || lower.includes('diet');
+    const hasActivity = lower.includes('activity') || lower.includes('exercise') || lower.includes('workout') || lower.includes('fitness');
+    const hasMovement = lower.includes('movement') || lower.includes('steps') || lower.includes('walk') || lower.includes('run');
+    
+    console.log('🧭 Keyword detection:', {
+      hasFood,
+      hasActivity,
+      hasMovement,
+      text: lower
+    });
+    
+    if (hasFood) {
       console.log('🧭 Navigating to FoodLogs');
       navigation.navigate('FoodLogs');
-    } else if (lower.includes('activity')) {
+    } else if (hasActivity) {
       console.log('🧭 Navigating to Activity');
       navigation.navigate('Activity');
-    } else if (lower.includes('movement')) {
+    } else if (hasMovement) {
       console.log('🧭 Navigating to Movements');
       navigation.navigate('Movements');
     } else {
-      console.log('🧭 Navigating to Home (default)');
+      console.log('🧭 No keywords found, navigating to Home (default)');
       navigation.navigate('Home');
     }
     

@@ -28,12 +28,13 @@ const styles = StyleSheet.create({
   },
   textArea: {
     backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    borderRadius: 16,
     padding: 12,
     minHeight: 60,
     borderWidth: 1,
     borderColor: '#e9ecef',
     justifyContent: 'center',
+    borderColor: '#467267',
   },
   text: {
     fontSize: 16,
