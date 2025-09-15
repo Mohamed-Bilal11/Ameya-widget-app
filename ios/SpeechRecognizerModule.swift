@@ -25,13 +25,25 @@ class SpeechRecognizerModule: RCTEventEmitter, SFSpeechRecognizerDelegate, SFSpe
     @objc
     func startListening() {
         print("[SpeechRecognizerModule] startListening called from JS")
-        SFSpeechRecognizer.requestAuthorization { authStatus in
-            if authStatus != .authorized {
-                self.sendEvent(withName: "onSpeechError", body: "Speech recognition not authorized")
+        
+        // First request microphone permission
+        AVAudioSession.sharedInstance().requestRecordPermission { granted in
+            if !granted {
+                print("[SpeechRecognizerModule] Microphone permission denied")
+                self.sendEvent(withName: "onSpeechError", body: "Microphone permission denied")
                 return
             }
-            DispatchQueue.main.async {
-                self.startRecording()
+            
+            // Then request speech recognition permission
+            SFSpeechRecognizer.requestAuthorization { authStatus in
+                if authStatus != .authorized {
+                    print("[SpeechRecognizerModule] Speech recognition not authorized: \(authStatus.rawValue)")
+                    self.sendEvent(withName: "onSpeechError", body: "Speech recognition not authorized")
+                    return
+                }
+                DispatchQueue.main.async {
+                    self.startRecording()
+                }
             }
         }
     }
@@ -43,6 +55,21 @@ class SpeechRecognizerModule: RCTEventEmitter, SFSpeechRecognizerDelegate, SFSpe
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
         recognitionTask = nil
+    }
+    
+    @objc
+    func checkMicrophonePermission(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        let status = AVAudioSession.sharedInstance().recordPermission
+        resolve(status == .granted)
+    }
+    
+    @objc
+    func openSettings() {
+        if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+            DispatchQueue.main.async {
+                UIApplication.shared.open(settingsUrl)
+            }
+        }
     }
 
     private func startRecording() {
@@ -81,13 +108,11 @@ class SpeechRecognizerModule: RCTEventEmitter, SFSpeechRecognizerDelegate, SFSpe
         recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
             if let result = result {
                 print("[SpeechRecognizerModule] Partial: \(result.bestTranscription.formattedString)")
-                // Send both partial and final results for continuous listening
-                self?.sendEvent(withName: "onSpeechResults", body: result.bestTranscription.formattedString)
-                
                 if result.isFinal {
                     print("[SpeechRecognizerModule] Final: \(result.bestTranscription.formattedString)")
-                    // Don't stop the audio engine for continuous listening
-                    // The user will manually stop by releasing the button
+                    self?.sendEvent(withName: "onSpeechResults", body: result.bestTranscription.formattedString)
+                    self?.audioEngine.stop()
+                    node.removeTap(onBus: 0)
                 }
             }
             if let error = error {
@@ -116,16 +141,13 @@ class SpeechRecognizerModule: RCTEventEmitter, SFSpeechRecognizerDelegate, SFSpe
         if let bestTranscription = recognitionResult.bestTranscription.formattedString as String? {
             sendEvent(withName: "onSpeechResults", body: bestTranscription)
         }
-        // Don't automatically stop listening for continuous mode
-        // stopListening()
+        stopListening()
     }
 
     func speechRecognitionTask(_ task: SFSpeechRecognitionTask, didFinishSuccessfully successfully: Bool) {
         if !successfully {
             sendEvent(withName: "onSpeechError", body: "Recognition failed")
-            stopListening()
         }
-        // Don't automatically stop listening for continuous mode
-        // stopListening()
+        stopListening()
     }
 }
