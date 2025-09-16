@@ -35,15 +35,25 @@ public class SpeechRecognizerModule extends ReactContextBaseJavaModule implement
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override
             public void run() {
-                if (speechRecognizer == null) {
-                    speechRecognizer = SpeechRecognizer.createSpeechRecognizer(reactContext);
-                    speechRecognizer.setRecognitionListener(SpeechRecognizerModule.this);
+                // Destroy existing recognizer to ensure clean state
+                if (speechRecognizer != null) {
+                    speechRecognizer.destroy();
+                    speechRecognizer = null;
                 }
+                
+                // Create new recognizer
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(reactContext);
+                speechRecognizer.setRecognitionListener(SpeechRecognizerModule.this);
                 isListening = true;
+                
                 Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
                 intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+                // Add more reliable settings
+                intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
+                intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, reactContext.getPackageName());
+                
                 speechRecognizer.startListening(intent);
             }
         });
@@ -80,23 +90,32 @@ public class SpeechRecognizerModule extends ReactContextBaseJavaModule implement
     public void onResults(Bundle results){
      ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
      if(matches != null && !matches.isEmpty()){
+         System.out.println("Speech result: " + matches.get(0));
          sendEvent("onSpeechResults",matches.get(0));
      }
      
      // Restart listening immediately for continuous mode
      if (isListening) {
+         System.out.println("Restarting listening for continuous mode...");
          new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
              @Override
              public void run() {
                  if (isListening && speechRecognizer != null) {
-                     Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                     intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                     intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
-                     intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-                     speechRecognizer.startListening(intent);
+                     try {
+                         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
+                         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+                         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
+                         intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, reactContext.getPackageName());
+                         speechRecognizer.startListening(intent);
+                         System.out.println("Successfully restarted listening");
+                     } catch (Exception e) {
+                         System.out.println("Error restarting listening: " + e.getMessage());
+                     }
                  }
              }
-         }, 50); // Very short delay to restart immediately
+         }, 100); // Slightly longer delay for better stability
      }
     }
 
@@ -116,31 +135,58 @@ public class SpeechRecognizerModule extends ReactContextBaseJavaModule implement
    public void onReadyForSpeech(Bundle params){}
    
    @Override 
-   public void onBeginningOfSpeech(){}
+   public void onBeginningOfSpeech(){
+       System.out.println("Speech beginning detected");
+   }
    
    @Override 
-   public void onRmsChanged(float rmsdB){}
+   public void onRmsChanged(float rmsdB){
+       // This is called continuously while speech is detected
+       // We can use this to detect if speech is still happening
+   }
    
    @Override 
    public void onEndOfSpeech(){
+       System.out.println("Speech ended, but continuing to listen...");
        // Don't stop listening automatically - let user control it
+       // The recognizer will continue listening for more speech
    }
    
    @Override 
    public void onError(int error){
+       System.out.println("SpeechRecognizer error: " + error);
+       
        if (isListening) {
-           new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-               @Override
-               public void run() {
-                   if (isListening && speechRecognizer != null) {
-                       Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                       intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                       intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
-                       intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-                       speechRecognizer.startListening(intent);
+           // Only restart for specific recoverable errors
+           if (error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT || 
+               error == SpeechRecognizer.ERROR_NO_MATCH ||
+               error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
+               
+               new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                   @Override
+                   public void run() {
+                       if (isListening) {
+                           // Destroy and recreate for better reliability
+                           if (speechRecognizer != null) {
+                               speechRecognizer.destroy();
+                               speechRecognizer = null;
+                           }
+                           
+                           speechRecognizer = SpeechRecognizer.createSpeechRecognizer(reactContext);
+                           speechRecognizer.setRecognitionListener(SpeechRecognizerModule.this);
+                           
+                           Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                           intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                           intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
+                           intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+                           intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
+                           intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, reactContext.getPackageName());
+                           
+                           speechRecognizer.startListening(intent);
+                       }
                    }
-               }
-           }, 100);
+               }, 500); // Longer delay for better recovery
+           }
        }
    }
    
