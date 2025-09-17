@@ -1,7 +1,12 @@
 import React from 'react';
-import { View, TextInput, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet, Keyboard } from 'react-native';
 
-const TextInputComponent = ({ value, onChangeText, placeholder, editable = true, multiline = true }) => {
+const TextInputComponent = ({ value, onChangeText, placeholder, editable = true, multiline = true, returnKeyType = 'done' }) => {
+  const onSubmitEditing = () => {
+    if(returnKeyType === 'done') {
+      Keyboard.dismiss();
+    }
+  };
   return (
     <View style={styles.container}>
       <TextInput
@@ -14,6 +19,9 @@ const TextInputComponent = ({ value, onChangeText, placeholder, editable = true,
         numberOfLines={3}
         editable={editable}
         textAlignVertical="top"
+        returnKeyType={returnKeyType}
+        onSubmitEditing={onSubmitEditing}
+        blurOnSubmit={true}
       />
     </View>
   );

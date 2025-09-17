@@ -50,6 +50,7 @@ const TextInputNavigation = () => {
         onChangeText={setText}
         placeholder="Type your navigation request..."
         editable={!isProcessing}
+        returnKeyType="done"
       />
       
       <ActionButtons
