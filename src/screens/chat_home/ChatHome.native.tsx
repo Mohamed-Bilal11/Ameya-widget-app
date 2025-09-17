@@ -7,11 +7,7 @@ import {
   TouchableHighlight,
 } from 'react-native';
 
-import Voice, {
-  type SpeechRecognizedEvent,
-  type SpeechResultsEvent,
-  type SpeechErrorEvent,
-} from '@react-native-voice/voice';
+import SpeechAPI from '../../services/SpeechAPI';
 
 type Props = {};
 type State = {
@@ -22,6 +18,7 @@ type State = {
   started: string;
   results: string[];
   partialResults: string[];
+  recording: boolean;
 };
 
 class ChatHome extends Component<Props, State> {
@@ -33,70 +30,68 @@ class ChatHome extends Component<Props, State> {
     started: '',
     results: [],
     partialResults: [],
+    recording: false,
   };
+
+  private resultListener: any;
+  private errorListener: any;
 
   constructor(props: Props) {
     super(props);
-    Voice.onSpeechStart = this.onSpeechStart;
-    Voice.onSpeechRecognized = this.onSpeechRecognized;
-    Voice.onSpeechEnd = this.onSpeechEnd;
-    Voice.onSpeechError = this.onSpeechError;
-    Voice.onSpeechResults = this.onSpeechResults;
-    Voice.onSpeechPartialResults = this.onSpeechPartialResults;
-    Voice.onSpeechVolumeChanged = this.onSpeechVolumeChanged;
+    this.resultListener = SpeechAPI.addResultListener(this.onSpeechResults);
+    this.errorListener = SpeechAPI.addErrorListener(this.onSpeechError);
   }
 
   componentWillUnmount() {
-    Voice.destroy().then(Voice.removeAllListeners);
+    if (this.resultListener) {
+      this.resultListener.remove();
+    }
+    if (this.errorListener) {
+      this.errorListener.remove();
+    }
   }
 
-  onSpeechStart = (e: any) => {
-    console.log('onSpeechStart: ', e);
+  onSpeechStart = () => {
+    console.log('onSpeechStart');
     this.setState({
       started: '√',
+      recording: true,
     });
   };
 
-  onSpeechRecognized = (e: SpeechRecognizedEvent) => {
-    console.log('onSpeechRecognized: ', e);
-    this.setState({
-      recognized: '√',
-    });
-  };
-
-  onSpeechEnd = (e: any) => {
-    console.log('onSpeechEnd: ', e);
+  onSpeechEnd = () => {
+    console.log('onSpeechEnd');
     this.setState({
       end: '√',
+      recording: false,
     });
   };
 
-  onSpeechError = (e: SpeechErrorEvent) => {
-    console.log('onSpeechError: ', e);
+  onSpeechError = (error: any) => {
+    console.log('onSpeechError: ', error);
     this.setState({
-      error: JSON.stringify(e.error),
+      error: typeof error === 'string' ? error : JSON.stringify(error),
+      recording: false,
     });
   };
 
-  onSpeechResults = (e: SpeechResultsEvent) => {
-    console.log('onSpeechResults: ', e);
-    this.setState({
-      results: e.value && e.value?.length > 0 ? e.value : [],
-    });
-  };
-
-  onSpeechPartialResults = (e: SpeechResultsEvent) => {
-    console.log('onSpeechPartialResults: ', e);
-    this.setState({
-      partialResults: e.value && e.value?.length > 0 ? e.value : [],
-    });
-  };
-
-  onSpeechVolumeChanged = (e: any) => {
-    console.log('onSpeechVolumeChanged: ', e);
-    this.setState({
-      pitch: e.value,
-    });
+  onSpeechResults = (result: any) => {
+    console.log('onSpeechResults: ', result);
+    let text = '';
+    if (typeof result === 'string') {
+      text = result;
+    } else if (result && result.value) {
+      text = result.value;
+    } else if (result && result.length > 0) {
+      text = result[0];
+    }
+    
+    if (text) {
+      this.setState({
+        results: [text],
+        recognized: '√',
+      });
+    }
   };
 
   _startRecognizing = async () => {
@@ -108,34 +103,41 @@ class ChatHome extends Component<Props, State> {
       results: [],
       partialResults: [],
       end: '',
+      recording: false,
     });
 
     try {
-      await Voice.start('en-US');
+      this.onSpeechStart();
+      await SpeechAPI.startListening();
     } catch (e) {
       console.error(e);
+      this.onSpeechError(e);
     }
   };
 
   _stopRecognizing = async () => {
     try {
-      await Voice.stop();
+      await SpeechAPI.stopListening();
+      this.onSpeechEnd();
     } catch (e) {
       console.error(e);
+      this.onSpeechError(e);
     }
   };
 
   _cancelRecognizing = async () => {
     try {
-      await Voice.cancel();
+      await SpeechAPI.stopListening();
+      this.onSpeechEnd();
     } catch (e) {
       console.error(e);
+      this.onSpeechError(e);
     }
   };
 
   _destroyRecognizer = async () => {
     try {
-      await Voice.destroy();
+      await SpeechAPI.stopListening();
     } catch (e) {
       console.error(e);
     }
@@ -147,16 +149,18 @@ class ChatHome extends Component<Props, State> {
       results: [],
       partialResults: [],
       end: '',
+      recording: false,
     });
   };
 
   render() {
     return (
       <View style={styles.container}>
-        <Text style={styles.welcome}>Welcome to React Native Voice!</Text>
+        <Text style={styles.welcome}>Welcome to Custom Speech Recognition!</Text>
         <Text style={styles.instructions}>
           Press the button and start speaking.
         </Text>
+        <Text style={styles.stat}>{`Recording: ${this.state.recording ? 'Yes' : 'No'}`}</Text>
         <Text style={styles.stat}>{`Started: ${this.state.started}`}</Text>
         <Text style={styles.stat}>{`Recognized: ${
           this.state.recognized
@@ -166,7 +170,7 @@ class ChatHome extends Component<Props, State> {
         <Text style={styles.stat}>Results</Text>
         {this.state.results.map((result, index) => {
           return (
-            <Text key={`result-${index}`} style={styles.stat}>
+            <Text style={styles.stat}>
               {result}
             </Text>
           );
@@ -174,7 +178,7 @@ class ChatHome extends Component<Props, State> {
         <Text style={styles.stat}>Partial Results</Text>
         {this.state.partialResults.map((result, index) => {
           return (
-            <Text key={`partial-result-${index}`} style={styles.stat}>
+            <Text style={styles.stat}>
               {result}
             </Text>
           );

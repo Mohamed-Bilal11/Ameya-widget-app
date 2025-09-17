@@ -25,13 +25,25 @@ class SpeechRecognizerModule: RCTEventEmitter, SFSpeechRecognizerDelegate, SFSpe
     @objc
     func startListening() {
         print("[SpeechRecognizerModule] startListening called from JS")
-        SFSpeechRecognizer.requestAuthorization { authStatus in
-            if authStatus != .authorized {
-                self.sendEvent(withName: "onSpeechError", body: "Speech recognition not authorized")
+        
+        // First request microphone permission
+        AVAudioSession.sharedInstance().requestRecordPermission { granted in
+            if !granted {
+                print("[SpeechRecognizerModule] Microphone permission denied")
+                self.sendEvent(withName: "onSpeechError", body: "Microphone permission denied")
                 return
             }
-            DispatchQueue.main.async {
-                self.startRecording()
+            
+            // Then request speech recognition permission
+            SFSpeechRecognizer.requestAuthorization { authStatus in
+                if authStatus != .authorized {
+                    print("[SpeechRecognizerModule] Speech recognition not authorized: \(authStatus.rawValue)")
+                    self.sendEvent(withName: "onSpeechError", body: "Speech recognition not authorized")
+                    return
+                }
+                DispatchQueue.main.async {
+                    self.startRecording()
+                }
             }
         }
     }
@@ -47,6 +59,7 @@ class SpeechRecognizerModule: RCTEventEmitter, SFSpeechRecognizerDelegate, SFSpe
 
     private func startRecording() {
         print("[SpeechRecognizerModule] startRecording called")
+        
         if audioEngine.isRunning {
             print("[SpeechRecognizerModule] audioEngine already running, stopping")
             audioEngine.stop()
@@ -54,52 +67,53 @@ class SpeechRecognizerModule: RCTEventEmitter, SFSpeechRecognizerDelegate, SFSpe
             return
         }
 
-        // Set up audio session
         let audioSession = AVAudioSession.sharedInstance()
         do {
-            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .duckOthers)
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
             print("[SpeechRecognizerModule] audioSession set up and activated")
         } catch {
-            print("[SpeechRecognizerModule] audioSession setup error: \(error)")
-            sendEvent(withName: "onSpeechError", body: "audioSession error: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                self.sendEvent(withName: "onSpeechError", body: "audioSession error: \(error.localizedDescription)")
+            }
             return
         }
 
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let recognitionRequest = recognitionRequest else {
-            print("[SpeechRecognizerModule] Unable to create recognitionRequest")
-            sendEvent(withName: "onSpeechError", body: "Unable to create recognitionRequest")
+            DispatchQueue.main.async {
+                self.sendEvent(withName: "onSpeechError", body: "Unable to create recognitionRequest")
+            }
             return
         }
         recognitionRequest.shouldReportPartialResults = true
 
-        // Remove any existing taps
         let node = audioEngine.inputNode
         node.removeTap(onBus: 0)
 
         recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
+            guard let self = self else { return }
+
             if let result = result {
-                print("[SpeechRecognizerModule] Partial: \(result.bestTranscription.formattedString)")
-                // Send both partial and final results for continuous listening
-                self?.sendEvent(withName: "onSpeechResults", body: result.bestTranscription.formattedString)
-                
-                if result.isFinal {
-                    print("[SpeechRecognizerModule] Final: \(result.bestTranscription.formattedString)")
-                    // Don't stop the audio engine for continuous listening
-                    // The user will manually stop by releasing the button
+                let text = result.bestTranscription.formattedString
+                print("[SpeechRecognizerModule] Result: \(text)")
+                DispatchQueue.main.async {
+                    self.sendEvent(withName: "onSpeechResults", body: text)
                 }
             }
+
             if let error = error {
-                print("[SpeechRecognizerModule] recognitionTask error: \(error)")
-                self?.sendEvent(withName: "onSpeechError", body: error.localizedDescription)
-                self?.audioEngine.stop()
+                print("[SpeechRecognizerModule] Error: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    self.sendEvent(withName: "onSpeechError", body: error.localizedDescription)
+                }
+                self.audioEngine.stop()
                 node.removeTap(onBus: 0)
             }
         }
 
         let recordingFormat = node.outputFormat(forBus: 0)
-        node.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { (buffer, when) in
+        node.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
             self.recognitionRequest?.append(buffer)
         }
 
@@ -107,8 +121,9 @@ class SpeechRecognizerModule: RCTEventEmitter, SFSpeechRecognizerDelegate, SFSpe
             try audioEngine.start()
             print("[SpeechRecognizerModule] audioEngine started")
         } catch {
-            print("[SpeechRecognizerModule] audioEngine start error: \(error)")
-            sendEvent(withName: "onSpeechError", body: "audioEngine error: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                self.sendEvent(withName: "onSpeechError", body: "audioEngine error: \(error.localizedDescription)")
+            }
         }
     }
 
