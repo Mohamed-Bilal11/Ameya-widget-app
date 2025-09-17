@@ -108,11 +108,13 @@ class SpeechRecognizerModule: RCTEventEmitter, SFSpeechRecognizerDelegate, SFSpe
         recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
             if let result = result {
                 print("[SpeechRecognizerModule] Partial: \(result.bestTranscription.formattedString)")
+                // Send both partial and final results for continuous listening
+                self?.sendEvent(withName: "onSpeechResults", body: result.bestTranscription.formattedString)
+                
                 if result.isFinal {
                     print("[SpeechRecognizerModule] Final: \(result.bestTranscription.formattedString)")
-                    self?.sendEvent(withName: "onSpeechResults", body: result.bestTranscription.formattedString)
-                    self?.audioEngine.stop()
-                    node.removeTap(onBus: 0)
+                    // Don't stop the audio engine for continuous listening
+                    // The user will manually stop by releasing the button
                 }
             }
             if let error = error {
@@ -141,13 +143,16 @@ class SpeechRecognizerModule: RCTEventEmitter, SFSpeechRecognizerDelegate, SFSpe
         if let bestTranscription = recognitionResult.bestTranscription.formattedString as String? {
             sendEvent(withName: "onSpeechResults", body: bestTranscription)
         }
-        stopListening()
+        // Don't automatically stop listening for continuous mode
+        // stopListening()
     }
 
     func speechRecognitionTask(_ task: SFSpeechRecognitionTask, didFinishSuccessfully successfully: Bool) {
         if !successfully {
             sendEvent(withName: "onSpeechError", body: "Recognition failed")
+            stopListening()
         }
-        stopListening()
+        // Don't automatically stop listening for continuous mode
+        // stopListening()
     }
 }
