@@ -1,17 +1,6 @@
-import { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid } from 'react-native';
+import { Platform, PermissionsAndroid } from 'react-native';
 
-const { SpeechRecognizerModule } = NativeModules;
-
-// Guard: Only create NativeEventEmitter if the module exists
-let speechEvents;
-if (SpeechRecognizerModule) {
-  speechEvents = new NativeEventEmitter(SpeechRecognizerModule);
-} else {
-  // Dummy event emitter to avoid crash
-  speechEvents = {
-    addListener: () => ({ remove: () => {} })
-  };
-}
+// No native speech recognition module available
 
 const requestAudioPermission = async () => {
   if (Platform.OS === 'android') {
@@ -34,20 +23,25 @@ export default {
   startListening: async () => {
     if (Platform.OS === 'android') {
       const hasPermission = await requestAudioPermission();
-      if (hasPermission && SpeechRecognizerModule) {
-        SpeechRecognizerModule.startListening();
+      if (hasPermission) {
+        // Android speech recognition implementation would go here
+        console.log('Android speech recognition not implemented');
       }
-    } else if (SpeechRecognizerModule) {
-      SpeechRecognizerModule.startListening();
+    } else {
+      // iOS speech recognition removed
+      console.log('iOS speech recognition not available');
     }
   },
   stopListening: () => {
-    if (Platform.OS === 'android') {
-      if (SpeechRecognizerModule) SpeechRecognizerModule.stopListening();
-    } else if (SpeechRecognizerModule) {
-      SpeechRecognizerModule.stopListening();
-    }
+    // Speech recognition not available
+    console.log('Speech recognition not available');
   },
-  addResultListener: (callback) => speechEvents.addListener('onSpeechResults', callback),
-  addErrorListener: (callback) => speechEvents.addListener('onSpeechError', callback),
+  addResultListener: (callback) => {
+    // Return dummy listener
+    return { remove: () => {} };
+  },
+  addErrorListener: (callback) => {
+    // Return dummy listener
+    return { remove: () => {} };
+  },
 };
