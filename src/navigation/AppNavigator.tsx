@@ -18,12 +18,54 @@ const AppNavigator = () => {
 
   return (
     <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen name="Home" component={Home} />
-        <Stack.Screen name="FoodLogs" component={FoodLog} />
-        <Stack.Screen name="Movements" component={Movements} />
-        <Stack.Screen name="Activity" component={Activity} />
-        <Stack.Screen name="ChatHome" component={ChatHome} />
+      <Stack.Navigator 
+        id="MainStack"
+        initialRouteName="Home"
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: '#E9F1E0',
+          },
+          headerTintColor: '#467267',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+          },
+        }}
+      >
+        <Stack.Screen 
+          name="Home" 
+          component={Home} 
+          options={{
+            headerShown: false, // Hide header for Home since we use SafeAreaView
+          }}
+        />
+        <Stack.Screen 
+          name="FoodLogs" 
+          component={FoodLog} 
+          options={{
+            title: '🍽️ Food Logs',
+          }}
+        />
+        <Stack.Screen 
+          name="Movements" 
+          component={Movements} 
+          options={{
+            title: '🧘 Movements',
+          }}
+        />
+        <Stack.Screen 
+          name="Activity" 
+          component={Activity} 
+          options={{
+            title: '🚶 Activity',
+          }}
+        />
+        <Stack.Screen 
+          name="ChatHome" 
+          component={ChatHome} 
+          options={{
+            title: '💬 AI Chat',
+          }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
