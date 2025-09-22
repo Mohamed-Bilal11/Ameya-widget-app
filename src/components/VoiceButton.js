@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Button, ActivityIndicator, PermissionsAndroid ,StyleSheet,TextInput,TouchableOpacity, Text, PanResponder } from 'react-native';
 import { startRecording, stopRecording } from '../services/Recorder';
 import { transcribeAudio, detectIntent } from '../services/VoiceAPI';
@@ -14,78 +14,81 @@ export default function VoiceButton() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [transcription, setTranscription] = useState('');
+  const currentTranscriptionRef = useRef('');
 
   const navigation = useNavigation();
 
   useEffect(() => {
-    const resultListener = SpeechAPI.addResultListener(onSpeechResultsHandler);
-    const errorListener = SpeechAPI.addErrorListener(onSpeechErrorHandler);
+    // Set up global callback as backup
+    SpeechAPI.setGlobalSpeechResultCallback(onSpeechResultsHandler);
+    
+    // Add a small delay to ensure SpeechAPI is properly initialized
+    const setupListeners = () => {
+      console.log('🎤 VoiceButton: Setting up event listeners');
+      const resultListener = SpeechAPI.addResultListener(onSpeechResultsHandler);
+      const errorListener = SpeechAPI.addErrorListener(onSpeechErrorHandler);
+      const startListener = SpeechAPI.addStartListener(() => {
+        console.log('🎤 VoiceButton: Speech recognition started');
+      });
+      const endListener = SpeechAPI.addEndListener(() => {
+        console.log('🎤 VoiceButton: Speech recognition ended');
+      });
+      
+      console.log('🎤 VoiceButton: Event listeners set up:', {
+        resultListener: !!resultListener,
+        errorListener: !!errorListener,
+        startListener: !!startListener,
+        endListener: !!endListener
+      });
+      
+      return () => {
+        console.log('🎤 VoiceButton: Cleaning up event listeners');
+        resultListener.remove();
+        errorListener.remove();
+        startListener.remove();
+        endListener.remove();
+      };
+    };
+    
+    // Set up listeners after a short delay
+    const timeoutId = setTimeout(setupListeners, 100);
+    
     return () => {
-      resultListener.remove();
-      errorListener.remove();
+      clearTimeout(timeoutId);
+      SpeechAPI.setGlobalSpeechResultCallback(null);
     };
   }, []);
 
   const onSpeechResultsHandler = (result) => {
+    console.log('🎤 VoiceButton: onSpeechResultsHandler called with:', result);
+    
     let text = '';
-    if (typeof result === 'string') {
+    
+    // Handle the new SpeechAPI format: { text: "Hello", isFinal: false }
+    if (result && result.text) {
+      text = result.text;
+    } else if (typeof result === 'string') {
       text = result;
     } else if (result && result.value) {
       text = result.value;
     } else if (result && result.length > 0) {
       text = result[0];
     }
-    if (!text) return;
     
-    console.log('🎤 Received speech result:', text);
+    if (!text) {
+      console.log('🎤 VoiceButton: No text found in result, returning');
+      return;
+    }
     
-    // Accumulate transcription text with previous text
-    setTranscription(prevText => {
-      const newText = text.trim();
-      
-      // If this is the first text
-      if (!prevText) {
-        return newText;
-      }
-      
-      // If the new text contains the previous text (refinement), use the new text
-      if (newText.toLowerCase().includes(prevText.toLowerCase())) {
-        return newText;
-      }
-      
-      // If the new text is shorter than previous (partial result), keep previous
-      if (newText.length < prevText.length) {
-        return prevText;
-      }
-      
-      // If the new text is a single word and previous text ends with a similar word, replace it
-      const prevWords = prevText.toLowerCase().split(' ');
-      const newWords = newText.toLowerCase().split(' ');
-      
-      if (newWords.length === 1 && prevWords.length > 1) {
-        const lastWord = prevWords[prevWords.length - 1];
-        const newWord = newWords[0];
-        
-        // If the new word is similar to the last word (like "moment" -> "movements")
-        if (newWord.includes(lastWord) || lastWord.includes(newWord) || 
-            (newWord.length > lastWord.length && newWord.startsWith(lastWord))) {
-          const updatedWords = [...prevWords];
-          updatedWords[updatedWords.length - 1] = newWord;
-          return updatedWords.join(' ');
-        }
-      }
-      
-      // If it's a continuation or new phrase, append it
-      if (!prevText.toLowerCase().includes(newText.toLowerCase())) {
-        return prevText + ' ' + newText;
-      }
-      
-      // Default: use the new text
-      return newText;
-    });
+    console.log('🎤 VoiceButton: Received speech result:', text, 'isFinal:', result?.isFinal);
+    
+    // Simply update transcription with the latest result
+    const newTranscription = text.trim();
+    setTranscription(newTranscription);
+    currentTranscriptionRef.current = newTranscription;
     
     // Debug logging
-    console.log('🎤 Speech recognized:', text);
+    console.log('🎤 VoiceButton: Updated transcription to:', newTranscription);
   };
 
   const onSpeechErrorHandler = (error) => {
@@ -118,26 +121,47 @@ export default function VoiceButton() {
     // Check for keywords with better detection (including variations and natural language)
     const hasFood = lower.includes('food') || lower.includes('meal') || lower.includes('eat') || lower.includes('diet') || 
                    lower.includes('breakfast') || lower.includes('lunch') || lower.includes('dinner') || lower.includes('snack') ||
-                   lower.includes('log food') || lower.includes('food log') || lower.includes('add food') || lower.includes('record food');
+                   lower.includes('log food') || lower.includes('food log') || lower.includes('add food') || lower.includes('record food') ||
+                   lower.includes('go to food') || lower.includes('show food') || lower.includes('food logs');
     
     const hasActivity = lower.includes('activity') || lower.includes('exercise') || lower.includes('workout') || lower.includes('fitness') ||
                        lower.includes('gym') || lower.includes('sport') || lower.includes('training') || lower.includes('cardio') ||
-                       lower.includes('log activity') || lower.includes('activity log') || lower.includes('track activity');
+                       lower.includes('log activity') || lower.includes('activity log') || lower.includes('track activity') ||
+                       lower.includes('go to activity') || lower.includes('show activity') || lower.includes('activities');
     
     const hasMovement = lower.includes('movement') || lower.includes('steps') || lower.includes('walk') || lower.includes('run') ||
                        lower.includes('jog') || lower.includes('hike') || lower.includes('travel') || lower.includes('distance') ||
                        lower.includes('moment') || lower.includes('moments') ||
                        lower.includes('log movement') || lower.includes('movement log') || lower.includes('track movement') || lower.includes('track steps') ||
-                       lower.includes('track moment') || lower.includes('track moments');
+                       lower.includes('track moment') || lower.includes('track moments') ||
+                       lower.includes('go to movement') || lower.includes('show movement') || lower.includes('movements');
+    
+    const hasChat = lower.includes('chat') || lower.includes('talk') || lower.includes('conversation') || lower.includes('assistant') ||
+                   lower.includes('help') || lower.includes('ask') || lower.includes('question') ||
+                   lower.includes('go to chat') || lower.includes('show chat') || lower.includes('chat home');
+    
+    const hasHelp = lower.includes('what can i say') || lower.includes('voice commands') || lower.includes('available commands') ||
+                   lower.includes('help me') || lower.includes('what commands') || lower.includes('show commands');
     
     console.log('🧭 Keyword detection:', {
       hasFood,
       hasActivity,
       hasMovement,
+      hasChat,
+      hasHelp,
       text: lower
     });
     
-    if (hasFood) {
+    if (hasHelp) {
+      console.log('🧭 Showing voice commands help');
+      // For now, just show in console - you could add a modal or alert here
+      console.log('🎤 Available voice commands:');
+      console.log('• "Go to food" or "Food logs" - Navigate to food tracking');
+      console.log('• "Go to activity" or "Exercise" - Navigate to activity tracking');
+      console.log('• "Go to movements" or "Steps" - Navigate to movement tracking');
+      console.log('• "Go to chat" or "Help" - Navigate to chat assistant');
+      console.log('• "Home" - Navigate to home screen');
+    } else if (hasFood) {
       console.log('🧭 Navigating to FoodLogs');
       navigation.navigate('FoodLogs');
     } else if (hasActivity) {
@@ -148,6 +172,9 @@ export default function VoiceButton() {
       console.log('🧭 Navigation object:', navigation);
       navigation.navigate('Movements');
       console.log('🧭 Navigation call completed');
+    } else if (hasChat) {
+      console.log('🧭 Navigating to ChatHome');
+      navigation.navigate('ChatHome');
     } else {
       console.log('🧭 No keywords found, navigating to Home (default)');
       navigation.navigate('Home');
@@ -159,32 +186,34 @@ export default function VoiceButton() {
   };
 
   const onStartRecord = async () => {
-    console.log('🎤 Starting recording...');
+    console.log('🎤 VoiceButton: Starting recording...');
     setLoading(true);
     setRecording(true);
     setTranscription(''); // Clear previous transcription
-    console.log('🧹 Cleared transcription for new recording session');
+    currentTranscriptionRef.current = ''; // Clear ref as well
+    console.log('🧹 VoiceButton: Cleared transcription for new recording session');
     
     try {
       await SpeechAPI.startListening();
-      console.log('🎤 Speech recognition started successfully');
+      console.log('🎤 VoiceButton: Speech recognition started successfully');
     } catch (error) {
-      console.error('🎤 Failed to start speech recognition:', error);
+      console.error('🎤 VoiceButton: Failed to start speech recognition:', error);
       setLoading(false);
       setRecording(false);
     }
   };
 
   const onStopRecord = async () => {
-    console.log('🛑 Stopping recording, final transcription:', transcription);
+    console.log('🛑 VoiceButton: Stopping recording, final transcription:', currentTranscriptionRef.current);
     setLoading(false);
     setRecording(false);
     await SpeechAPI.stopListening();
     
-    // Small delay to ensure final transcription is captured on Android
+    // Small delay to ensure final transcription is captured
     setTimeout(() => {
-      console.log('🛑 Final transcription after delay:', transcription);
-      handleNavigation(transcription);
+      const finalTranscription = currentTranscriptionRef.current;
+      console.log('🛑 VoiceButton: Final transcription after delay:', finalTranscription);
+      handleNavigation(finalTranscription);
     }, 200);
   };
 
