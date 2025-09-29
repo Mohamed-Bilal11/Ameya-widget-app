@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Button, ActivityIndicator, PermissionsAndroid ,StyleSheet,TextInput,TouchableOpacity, Text, PanResponder } from 'react-native';
-import { startRecording, stopRecording } from '../services/Recorder';
-import { transcribeAudio, detectIntent } from '../services/VoiceAPI';
+import { View, Button, ActivityIndicator, PermissionsAndroid, Platform, StyleSheet,TextInput,TouchableOpacity, Text, PanResponder } from 'react-native';
+import { detectIntent } from '../services/VoiceAPI';
 import { useNavigation } from '@react-navigation/native';
 import {voiceResponse} from '../data/voiceResponse'
 import Ionicons from 'react-native-vector-icons/Ionicons';

@@ -1,9 +1,13 @@
 import { Platform, PermissionsAndroid, NativeModules, NativeEventEmitter } from 'react-native';
 
-const { SpeechRecognizer } = NativeModules;
+const { SpeechRecognizer, SpeechRecognizerModule } = NativeModules;
 
-// Event emitter for iOS speech recognition events
-const speechEventEmitter = Platform.OS === 'ios' ? new NativeEventEmitter(SpeechRecognizer) : null;
+// Event emitter for speech recognition events
+const speechEventEmitter = Platform.OS === 'ios' 
+  ? new NativeEventEmitter(SpeechRecognizer) 
+  : Platform.OS === 'android' 
+    ? new NativeEventEmitter(SpeechRecognizerModule) 
+    : null;
 
 // Global callback for speech results (to avoid event emitter issues)
 let globalSpeechResultCallback = null;
@@ -73,6 +77,9 @@ export default {
         console.error('Error checking iOS speech availability:', error);
         return false;
       }
+    } else if (Platform.OS === 'android' && SpeechRecognizerModule) {
+      // Android SpeechRecognizer is always available if the module exists
+      return true;
     }
     return false;
   },
@@ -82,9 +89,19 @@ export default {
     if (Platform.OS === 'android') {
       const hasPermission = await requestAudioPermission();
       if (hasPermission) {
-        // Android speech recognition implementation would go here
-        console.log('Android speech recognition not implemented');
-        return { status: 'not_implemented' };
+        try {
+          console.log('🎤 Android: Starting speech recognition');
+          if (SpeechRecognizerModule) {
+            SpeechRecognizerModule.startListening();
+            return { status: 'started' };
+          } else {
+            console.error('🎤 Android: SpeechRecognizerModule not available');
+            return { status: 'error', error: 'SpeechRecognizerModule not available' };
+          }
+        } catch (error) {
+          console.error('🎤 Android speech recognition error:', error);
+          return { status: 'error', error: error.message };
+        }
       }
       return { status: 'permission_denied' };
     } else if (Platform.OS === 'ios' && SpeechRecognizer) {
@@ -107,7 +124,21 @@ export default {
 
   // Stop listening for speech
   stopListening: async () => {
-    if (Platform.OS === 'ios' && SpeechRecognizer) {
+    if (Platform.OS === 'android') {
+      try {
+        console.log('🎤 Android: Stopping speech recognition');
+        if (SpeechRecognizerModule) {
+          SpeechRecognizerModule.stopListening();
+          return { status: 'stopped' };
+        } else {
+          console.error('🎤 Android: SpeechRecognizerModule not available');
+          return { status: 'error', error: 'SpeechRecognizerModule not available' };
+        }
+      } catch (error) {
+        console.error('🎤 Android stop speech recognition error:', error);
+        return { status: 'error', error: error.message };
+      }
+    } else if (Platform.OS === 'ios' && SpeechRecognizer) {
       try {
         const result = await SpeechRecognizer.stopListening();
         return result;
@@ -139,7 +170,7 @@ export default {
     console.log('🎤 Adding result listener, Platform:', Platform.OS, 'speechEventEmitter:', !!speechEventEmitter);
     if (Platform.OS === 'ios' && speechEventEmitter) {
       const subscription = speechEventEmitter.addListener('onSpeechResult', (result) => {
-        console.log('🎤 Result listener callback triggered:', result);
+        console.log('🎤 iOS Result listener callback triggered:', result);
         callback(result);
         // Also call global callback if set
         if (globalSpeechResultCallback) {
@@ -147,7 +178,23 @@ export default {
           globalSpeechResultCallback(result);
         }
       });
-      console.log('🎤 Result listener added successfully');
+      console.log('🎤 iOS Result listener added successfully');
+      return {
+        remove: () => subscription.remove()
+      };
+    } else if (Platform.OS === 'android' && speechEventEmitter) {
+      const subscription = speechEventEmitter.addListener('onSpeechResults', (result) => {
+        console.log('🎤 Android Result listener callback triggered:', result);
+        // Android sends the result as a string directly
+        const formattedResult = { text: result, isFinal: true };
+        callback(formattedResult);
+        // Also call global callback if set
+        if (globalSpeechResultCallback) {
+          console.log('🎤 Calling global speech result callback');
+          globalSpeechResultCallback(formattedResult);
+        }
+      });
+      console.log('🎤 Android Result listener added successfully');
       return {
         remove: () => subscription.remove()
       };

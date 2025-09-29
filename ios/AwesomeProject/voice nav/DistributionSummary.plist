@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AwesomeProject.ipa</key>
+	<array>
+		<dict>
+			<key>architectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>buildNumber</key>
+			<string>2</string>
+			<key>certificate</key>
+			<dict>
+				<key>SHA1</key>
+				<string>757F451B2B8D6A5CBAAA2A967EC1B551BF37F40A</string>
+				<key>dateExpires</key>
+				<string>02/09/26</string>
+				<key>type</key>
+				<string>Cloud Managed Apple Distribution</string>
+			</dict>
+			<key>embeddedBinaries</key>
+			<array>
+				<dict>
+					<key>architectures</key>
+					<array>
+						<string>arm64</string>
+					</array>
+					<key>buildNumber</key>
+					<string>0.12.0</string>
+					<key>certificate</key>
+					<dict>
+						<key>SHA1</key>
+						<string>757F451B2B8D6A5CBAAA2A967EC1B551BF37F40A</string>
+						<key>dateExpires</key>
+						<string>02/09/26</string>
+						<key>type</key>
+						<string>Cloud Managed Apple Distribution</string>
+					</dict>
+					<key>name</key>
+					<string>hermes.framework</string>
+					<key>team</key>
+					<dict>
+						<key>id</key>
+						<string>JPUXW335N9</string>
+						<key>name</key>
+						<string>Iderize Technology Solutions Private Limited</string>
+					</dict>
+					<key>versionNumber</key>
+					<string>0.12.0</string>
+				</dict>
+				<dict>
+					<key>architectures</key>
+					<array>
+						<string>arm64</string>
+					</array>
+					<key>buildNumber</key>
+					<string>2</string>
+					<key>certificate</key>
+					<dict>
+						<key>SHA1</key>
+						<string>757F451B2B8D6A5CBAAA2A967EC1B551BF37F40A</string>
+						<key>dateExpires</key>
+						<string>02/09/26</string>
+						<key>type</key>
+						<string>Cloud Managed Apple Distribution</string>
+					</dict>
+					<key>entitlements</key>
+					<dict>
+						<key>application-identifier</key>
+						<string>JPUXW335N9.com.iderize.awesomeproject.widget</string>
+						<key>com.apple.developer.team-identifier</key>
+						<string>JPUXW335N9</string>
+						<key>com.apple.security.application-groups</key>
+						<array>
+							<string>group.com.iderize.awesomeproject</string>
+						</array>
+						<key>get-task-allow</key>
+						<false/>
+					</dict>
+					<key>name</key>
+					<string>MyWidgetExtension.appex</string>
+					<key>profile</key>
+					<dict>
+						<key>UUID</key>
+						<string>837bbd82-ce4c-4479-9df9-25ec3703ff62</string>
+						<key>dateExpires</key>
+						<string>02/09/26</string>
+						<key>name</key>
+						<string>iOS Team Ad Hoc Provisioning Profile: com.iderize.awesomeproject.widget</string>
+					</dict>
+					<key>team</key>
+					<dict>
+						<key>id</key>
+						<string>JPUXW335N9</string>
+						<key>name</key>
+						<string>Iderize Technology Solutions Private Limited</string>
+					</dict>
+					<key>versionNumber</key>
+					<string>1.0</string>
+				</dict>
+			</array>
+			<key>entitlements</key>
+			<dict>
+				<key>application-identifier</key>
+				<string>JPUXW335N9.com.iderize.awesomeproject</string>
+				<key>com.apple.developer.team-identifier</key>
+				<string>JPUXW335N9</string>
+				<key>com.apple.security.application-groups</key>
+				<array>
+					<string>group.com.iderize.awesomeproject</string>
+				</array>
+				<key>get-task-allow</key>
+				<false/>
+			</dict>
+			<key>name</key>
+			<string>AwesomeProject.app</string>
+			<key>profile</key>
+			<dict>
+				<key>UUID</key>
+				<string>3d9c2e6c-81da-42b9-8cda-54a882a16b39</string>
+				<key>dateExpires</key>
+				<string>02/09/26</string>
+				<key>name</key>
+				<string>iOS Team Ad Hoc Provisioning Profile: com.iderize.awesomeproject</string>
+			</dict>
+			<key>team</key>
+			<dict>
+				<key>id</key>
+				<string>JPUXW335N9</string>
+				<key>name</key>
+				<string>Iderize Technology Solutions Private Limited</string>
+			</dict>
+			<key>versionNumber</key>
+			<string>1.0</string>
+		</dict>
+	</array>
+</dict>
+</plist>
