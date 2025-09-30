@@ -4,6 +4,9 @@ import { useNavigation } from '@react-navigation/native';
 import TextInputComponent from './TextInput';
 import ActionButtons from './ActionButtons';
 import { processTextNavigation } from '../../services/TextNavigationService';
+import { extractActivityData, isActivityRelated } from '../../services/ActivityDataExtractor';
+import { extractFoodData, isFoodRelated } from '../../services/FoodDataExtractor';
+import { extractMovementData, isMovementRelated } from '../../services/MovementDataExtractor';
 
 const TextInputNavigation = () => {
   const [text, setText] = useState('');
@@ -21,8 +24,23 @@ const TextInputNavigation = () => {
       const result = await processTextNavigation(text.trim());
       console.log('🤖 Navigation Result:', result);
       
-      // Navigate based on result
-      if (result.screen) {
+      // Use screen-specific data extractors and navigation
+      if (isFoodRelated(text.trim())) {
+        console.log('🧭 Food-related text detected, navigating to FoodLogs');
+        const foodData = extractFoodData(text.trim());
+        navigation.navigate('FoodLogs', { foodData: foodData });
+        setText('');
+      } else if (isMovementRelated(text.trim())) {
+        console.log('🧭 Movement-related text detected, navigating to Movements');
+        const movementData = extractMovementData(text.trim());
+        navigation.navigate('Movements', { movementData: movementData });
+        setText('');
+      } else if (isActivityRelated(text.trim())) {
+        console.log('🧭 Activity-related text detected, navigating to Activity');
+        const activityData = extractActivityData(text.trim());
+        navigation.navigate('Activity', { activityData: activityData });
+        setText('');
+      } else if (result.screen) {
         navigation.navigate(result.screen);
         console.log('🧹 Clearing text input after navigation');
         setText(''); // Clear input after successful navigation
@@ -36,6 +54,7 @@ const TextInputNavigation = () => {
       setIsProcessing(false);
     }
   };
+
 
   const handleClear = () => {
     setText('');

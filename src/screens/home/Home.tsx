@@ -1,15 +1,55 @@
-import React from 'react';
-import { View, StyleSheet, Image, Dimensions, ScrollView } from 'react-native';
-import { Text, Button, Card } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import { Text, Card, ProgressBar } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-// @ts-ignore
-import { RootStackParamList } from '../navigation/AppNavigator';
-import VoiceButton from '../../components/VoiceButton';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomNavigation from '../../components/BottomNavigation';
 
 type Props = NativeStackScreenProps<any, 'Home'>;
 
 const Home: React.FC<Props> = ({ navigation }) => {
+  const [dashboardData, setDashboardData] = useState({
+    todaySteps: 0,
+    targetSteps: 10000,
+    mealsLogged: 0,
+    activitiesLogged: 0,
+    movementsLogged: 0,
+  });
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      // Load recent activity data
+      const lastActivity = await AsyncStorage.getItem('lastActivity');
+      const lastMovement = await AsyncStorage.getItem('lastMovement');
+      const foodLogs = await AsyncStorage.getItem('foodLogs');
+      
+      // Parse food logs to count today's meals
+      let mealsCount = 0;
+      if (foodLogs) {
+        const logs = JSON.parse(foodLogs);
+        mealsCount = logs.length;
+      }
+
+      // Simulate some progress data (in a real app, this would come from your backend)
+      setDashboardData({
+        todaySteps: Math.floor(Math.random() * 5000) + 3000, // Random steps between 3000-8000
+        targetSteps: 10000,
+        mealsLogged: mealsCount,
+        activitiesLogged: lastActivity ? 1 : 0,
+        movementsLogged: lastMovement ? 1 : 0,
+      });
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    }
+  };
+
+  const stepsProgress = dashboardData.todaySteps / dashboardData.targetSteps;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView 
@@ -19,49 +59,62 @@ const Home: React.FC<Props> = ({ navigation }) => {
       >
         <View style={styles.container}>
           <Text style={styles.title}>👋 Welcome Back!</Text>
-          <Text style={styles.subtitle}>Let's track your wellness journey</Text>
-          <VoiceButton />
-          <Card style={styles.card}>
-            <View style={styles.buttonWrapper}>
-              <Button
-                mode="contained"
-                onPress={() => navigation.navigate('FoodLogs')}
-                style={[styles.button, { backgroundColor: '#467267' }]}
-                labelStyle={styles.buttonLabel}
-              >
-                🍽️ Food Logs
-              </Button>
+          <Text style={styles.subtitle}>Here's your wellness progress today</Text>
 
-              <Button
-                mode="contained"
-                onPress={() => navigation.navigate('Movements')}
-                style={[styles.button, { backgroundColor: '#4996F6' }]}
-                labelStyle={styles.buttonLabel}
-              >
-                🧘 Movements
-              </Button>
+          {/* Steps Progress Card */}
+          <Card style={styles.progressCard}>
+            <Card.Content>
+              <Text style={styles.cardTitle}>🚶 Today's Steps</Text>
+              <Text style={styles.stepsText}>{dashboardData.todaySteps.toLocaleString()} / {dashboardData.targetSteps.toLocaleString()}</Text>
+              <ProgressBar 
+                progress={stepsProgress} 
+                color="#467267" 
+                style={styles.progressBar}
+              />
+              <Text style={styles.progressText}>
+                {Math.round(stepsProgress * 100)}% of daily goal
+              </Text>
+            </Card.Content>
+          </Card>
 
-              <Button
-                mode="contained"
-                onPress={() => navigation.navigate('Activity')}
-                style={[styles.button, { backgroundColor: '#DB7670' }]}
-                labelStyle={styles.buttonLabel}
-              >
-                🚶 Activity
-              </Button>
+          {/* Activity Summary Cards */}
+          <View style={styles.summaryGrid}>
+            <Card style={[styles.summaryCard, { backgroundColor: '#E3F2FD' }]}>
+              <Card.Content style={styles.summaryContent}>
+                <Text style={styles.summaryNumber}>{dashboardData.mealsLogged}</Text>
+                <Text style={styles.summaryLabel}>Meals Logged</Text>
+              </Card.Content>
+            </Card>
 
-              <Button
-                mode="contained"
-                onPress={() => navigation.navigate('ChatHome')}
-                style={[styles.button, { backgroundColor: '#7c3aed' }]}
-                labelStyle={styles.buttonLabel}
-              >
-                💬 AI Chat
-              </Button>
-            </View>
+            <Card style={[styles.summaryCard, { backgroundColor: '#FFE6E8' }]}>
+              <Card.Content style={styles.summaryContent}>
+                <Text style={styles.summaryNumber}>{dashboardData.activitiesLogged}</Text>
+                <Text style={styles.summaryLabel}>Activities</Text>
+              </Card.Content>
+            </Card>
+
+            <Card style={[styles.summaryCard, { backgroundColor: '#E8F5E8' }]}>
+              <Card.Content style={styles.summaryContent}>
+                <Text style={styles.summaryNumber}>{dashboardData.movementsLogged}</Text>
+                <Text style={styles.summaryLabel}>Movements</Text>
+              </Card.Content>
+            </Card>
+          </View>
+
+          {/* Quick Actions */}
+          <Card style={styles.quickActionsCard}>
+            <Card.Content>
+              <Text style={styles.cardTitle}>⚡ Quick Actions</Text>
+              <Text style={styles.quickActionsText}>
+                Use the microphone button below to quickly log your activities, or tap any tab to navigate to specific sections.
+              </Text>
+            </Card.Content>
           </Card>
         </View>
       </ScrollView>
+      
+      {/* Bottom Navigation */}
+      <BottomNavigation />
     </SafeAreaView>
   );
 };
@@ -73,67 +126,100 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#E9F1E0',
+    backgroundColor: '#1A1B2E',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    minHeight: '100%',
+    paddingBottom: 100, // Space for bottom navigation
   },
   container: {
     flex: 1,
-    backgroundColor: '#E9F1E0',
+    backgroundColor: '#1A1B2E',
     padding: 20,
-    justifyContent: 'center',
-    minHeight: '100%',
   },
   title: {
     fontSize: 30,
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#E8EAF6',
     textAlign: 'center',
     marginTop: 20,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#757575',
+    color: '#B39DDB',
     textAlign: 'center',
-    marginTop: 10,
     marginBottom: 30,
     fontWeight: 'bold'
   },
-  card: {
-    padding: 20,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+  progressCard: {
+    marginBottom: 20,
+    elevation: 3,
+    borderRadius: 16,
+    backgroundColor: '#2D2B55',
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#E8EAF6',
+    marginBottom: 12,
+  },
+  stepsText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#E1BEE7',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#B39DDB',
+    textAlign: 'center',
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 20,
   },
-  buttonWrapper: {
-    gap: 16,
+  summaryCard: {
+    flex: 1,
+    marginHorizontal: 4,
+    elevation: 2,
+    borderRadius: 12,
+    backgroundColor: '#2D2B55',
   },
-  button: {
+  summaryContent: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  summaryNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#E1BEE7',
+    marginBottom: 4,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#B39DDB',
+    textAlign: 'center',
+  },
+  quickActionsCard: {
+    elevation: 2,
     borderRadius: 16,
-    height: 52,
-    justifyContent: 'center',
+    backgroundColor: '#2D2B55',
   },
-  buttonLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  image: {
-    width: width * 0.5,
-    height: width * 0.5,
-    alignSelf: 'center',
-    marginTop: 40,
-    opacity: 0.9,
+  quickActionsText: {
+    fontSize: 14,
+    color: '#B39DDB',
+    lineHeight: 20,
+    textAlign: 'center',
   },
 });

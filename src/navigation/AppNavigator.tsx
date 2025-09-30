@@ -7,7 +7,7 @@ import Home from '../screens/home/Home';
 import FoodLog from '../screens/food_log/FoodLog';
 import Movements from '../screens/movements/Movements';
 import Activity from '../screens/activity/Activity';
-import ChatHome from '../screens/chat_home/ChatHome.native';
+import MicInput from '../screens/mic_input/MicInput';
 
 const Stack = createNativeStackNavigator();
 
@@ -19,7 +19,6 @@ const AppNavigator = () => {
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator 
-        id="MainStack"
         initialRouteName="Home"
         screenOptions={{
           headerStyle: {
@@ -60,10 +59,11 @@ const AppNavigator = () => {
           }}
         />
         <Stack.Screen 
-          name="ChatHome" 
-          component={ChatHome} 
+          name="MicInput" 
+          component={MicInput} 
           options={{
-            title: '💬 AI Chat',
+            title: '🎤 Voice & Text Input',
+            headerShown: false, // Hide header for full-screen experience
           }}
         />
       </Stack.Navigator>

@@ -14,6 +14,22 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeModules } from 'react-native';
+import { useRoute } from '@react-navigation/native';
+import BottomNavigation from '../../components/BottomNavigation';
+
+type FoodData = {
+  originalText: string;
+  food: string | null;
+  quantity: number | null;
+  unit: string | null;
+  meal: string | null;
+  description: string | null;
+  timestamp?: string;
+};
+
+type RouteParams = {
+  foodData?: FoodData;
+};
 
 const { WidgetUpdater } = NativeModules;
 
@@ -25,7 +41,9 @@ type FoodItem = {
 const FoodLog = () => {
   const [food, setFood] = useState('');
   const [logs, setLogs] = useState<FoodItem[]>([]);
+  const [autoLogged, setAutoLogged] = useState(false);
   const mountedRef = useRef(true);
+  const route = useRoute();
 
   useEffect(() => {
     mountedRef.current = true;
@@ -42,6 +60,49 @@ const FoodLog = () => {
       mountedRef.current = false;
     };
   }, []);
+
+  // Handle incoming food data from navigation
+  useEffect(() => {
+    const foodData = (route.params as RouteParams)?.foodData;
+    if (foodData && !autoLogged) {
+      console.log('📊 Received food data:', foodData);
+      
+      // Auto-populate the food field with extracted data
+      if (foodData.description) {
+        setFood(foodData.description);
+        
+        // Auto-log the food if it contains specific data
+        if (foodData.food || foodData.meal) {
+          setTimeout(() => {
+            handleAutoLog(foodData);
+          }, 1000); // Small delay to show the user what's happening
+        }
+      }
+    }
+  }, [(route.params as RouteParams)?.foodData, autoLogged]);
+
+  const handleAutoLog = async (foodData: FoodData) => {
+    try {
+      const newLog = { id: Date.now().toString(), name: foodData.description?.trim() || foodData.originalText };
+      const updatedLogs = [newLog, ...logs];
+
+      await AsyncStorage.setItem('foodLogs', JSON.stringify(updatedLogs));
+      await AsyncStorage.setItem('widget_type', 'food');
+      WidgetUpdater.updateWidget(`Hey! Log Food: ${foodData.description}`, 'food');
+      
+      if (mountedRef.current) {
+        InteractionManager.runAfterInteractions(() => {
+          setLogs(updatedLogs);
+        });
+      }
+      
+      setAutoLogged(true);
+      setFood('');
+      console.log('✅ Auto-logged food:', foodData.description);
+    } catch (error) {
+      console.error('❌ Error auto-logging food:', error);
+    }
+  };
 
   const addFood = async () => {
     if (!food.trim()) return;
@@ -65,20 +126,21 @@ const FoodLog = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.header}>🍱 Food Log</Text>
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
+          <Text style={styles.header}>🍱 Food Log</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your meal..."
-          value={food}
-          onChangeText={setFood}
-          placeholderTextColor="#999"
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your meal..."
+            value={food}
+            onChangeText={setFood}
+            placeholderTextColor="#999"
+          />
 
 <View style={styles.buttonWrapper}>
   <TouchableOpacity
@@ -94,21 +156,25 @@ const FoodLog = () => {
   </TouchableOpacity>
 </View>
 
-        <View style={styles.divider} />
+          <View style={styles.divider} />
 
-        <Text style={styles.subHeader}>📋 Today's Meal</Text>
+          <Text style={styles.subHeader}>📋 Today's Meal</Text>
 
-        {logs.length === 0 ? (
-          <Text style={styles.emptyText}>No meals logged yet 🥗</Text>
-        ) : (
-          logs.map((item) => (
-            <View key={item.id} style={styles.item}>
-              <Text style={styles.itemText}>🍽    {item.name}</Text>
-            </View>
-          ))
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {logs.length === 0 ? (
+            <Text style={styles.emptyText}>No meals logged yet 🥗</Text>
+          ) : (
+            logs.map((item) => (
+              <View key={item.id} style={styles.item}>
+                <Text style={styles.itemText}>🍽    {item.name}</Text>
+              </View>
+            ))
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+      
+      {/* Bottom Navigation */}
+      <BottomNavigation />
+    </>
   );
 };
 
@@ -121,7 +187,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 100, // Space for bottom navigation
   },
   header: {
     fontSize: 28,
