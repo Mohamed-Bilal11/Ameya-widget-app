@@ -40,10 +40,13 @@ const { WidgetUpdater } = NativeModules;
 type FoodItem = {
   id: string;
   name: string;
+  category: 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+  timestamp: string;
 };
 
 const FoodLog = () => {
   const [food, setFood] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<'breakfast' | 'lunch' | 'dinner' | 'snacks'>('breakfast');
   const [logs, setLogs] = useState<FoodItem[]>([]);
   const [autoLogged, setAutoLogged] = useState(false);
   const [isMultiScreen, setIsMultiScreen] = useState(false);
@@ -115,7 +118,31 @@ const FoodLog = () => {
       console.log('🤖 Auto-logging food data:', foodData);
       const shouldAdvance = isMultiScreenParam !== undefined ? isMultiScreenParam : isMultiScreen;
       console.log('🤖 FoodLog: isMultiScreen state:', isMultiScreen, 'isMultiScreenParam:', isMultiScreenParam, 'shouldAdvance:', shouldAdvance);
-      const newLog = { id: Date.now().toString(), name: foodData.description?.trim() || foodData.originalText };
+      
+      // Determine category from food data
+      let category: 'breakfast' | 'lunch' | 'dinner' | 'snacks' = 'breakfast';
+      if (foodData.meal) {
+        category = foodData.meal as 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+      } else {
+        // Try to detect category from text
+        const lowerText = (foodData.description || foodData.originalText || '').toLowerCase();
+        if (lowerText.includes('breakfast') || lowerText.includes('morning')) {
+          category = 'breakfast';
+        } else if (lowerText.includes('lunch') || lowerText.includes('noon')) {
+          category = 'lunch';
+        } else if (lowerText.includes('dinner') || lowerText.includes('evening')) {
+          category = 'dinner';
+        } else if (lowerText.includes('snack')) {
+          category = 'snacks';
+        }
+      }
+      
+      const newLog = { 
+        id: Date.now().toString(), 
+        name: foodData.description?.trim() || foodData.originalText,
+        category: category,
+        timestamp: new Date().toISOString()
+      };
       const updatedLogs = [newLog, ...logs];
 
       await AsyncStorage.setItem('foodLogs', JSON.stringify(updatedLogs));
@@ -151,7 +178,12 @@ const FoodLog = () => {
     if (!food.trim()) return;
 
     console.log('🍽️ Manual food logging:', food);
-    const newLog = { id: Date.now().toString(), name: food.trim() };
+    const newLog = { 
+      id: Date.now().toString(), 
+      name: food.trim(),
+      category: selectedCategory,
+      timestamp: new Date().toISOString()
+    };
     const updatedLogs = [newLog, ...logs];
 
     Keyboard.dismiss();
@@ -193,6 +225,30 @@ const FoodLog = () => {
             </View>
           )}
 
+          {/* Category Selection */}
+          <View style={styles.categoryContainer}>
+            <Text style={styles.categoryLabel}>Meal Category:</Text>
+            <View style={styles.categoryButtons}>
+              {(['breakfast', 'lunch', 'dinner', 'snacks'] as const).map((category) => (
+                <TouchableOpacity
+                  key={category}
+                  style={[
+                    styles.categoryButton,
+                    selectedCategory === category && styles.categoryButtonSelected
+                  ]}
+                  onPress={() => setSelectedCategory(category)}
+                >
+                  <Text style={[
+                    styles.categoryButtonText,
+                    selectedCategory === category && styles.categoryButtonTextSelected
+                  ]}>
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           <TextInput
             style={styles.input}
             placeholder="Enter your meal..."
@@ -217,16 +273,33 @@ const FoodLog = () => {
 
           <View style={styles.divider} />
 
-          <Text style={styles.subHeader}>📋 Today's Meal</Text>
+          <Text style={styles.subHeader}>📋 Today's Meals</Text>
 
           {logs.length === 0 ? (
             <Text style={styles.emptyText}>No meals logged yet 🥗</Text>
           ) : (
-            logs.map((item) => (
-              <View key={item.id} style={styles.item}>
-                <Text style={styles.itemText}>🍽    {item.name}</Text>
-              </View>
-            ))
+            <View>
+              {(['breakfast', 'lunch', 'dinner', 'snacks'] as const).map((category) => {
+                const categoryLogs = logs.filter(log => log.category === category);
+                if (categoryLogs.length === 0) return null;
+                
+                return (
+                  <View key={category} style={styles.categorySection}>
+                    <Text style={styles.categoryHeader}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)} ({categoryLogs.length})
+                    </Text>
+                    {categoryLogs.map((item) => (
+                      <View key={item.id} style={styles.item}>
+                        <Text style={styles.itemText}>🍽 {item.name}</Text>
+                        <Text style={styles.itemTime}>
+                          {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })}
+            </View>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -319,4 +392,52 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { backgroundColor: '#3F3FA633' },
   label: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  categoryContainer: {
+    marginBottom: 16,
+  },
+  categoryLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#467267',
+    marginBottom: 8,
+  },
+  categoryButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  categoryButtonSelected: {
+    backgroundColor: '#467267',
+    borderColor: '#467267',
+  },
+  categoryButtonText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  categoryButtonTextSelected: {
+    color: '#fff',
+  },
+  categorySection: {
+    marginBottom: 16,
+  },
+  categoryHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#467267',
+    marginBottom: 8,
+  },
+  itemTime: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
 });

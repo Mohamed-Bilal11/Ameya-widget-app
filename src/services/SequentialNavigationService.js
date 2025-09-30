@@ -189,7 +189,9 @@ export const completeCurrentScreen = (navigation, onComplete) => {
       console.log(`➡️ Navigation params:`, navigationParams);
       navigation.navigate(nextScreen.name, navigationParams);
     } else {
-      console.log('✅ Sequential navigation complete!');
+      console.log('✅ Sequential navigation complete! Navigating to home...');
+      // Navigate to home page after completing all logs
+      navigation.navigate('Home');
       if (onComplete) {
         onComplete();
       }

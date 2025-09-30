@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, ScrollView } from 'react-native';
-import { Text, Card, ProgressBar } from 'react-native-paper';
+import { View, StyleSheet, Dimensions, ScrollView, TouchableOpacity } from 'react-native';
+import { Text, Card, ProgressBar, Chip } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +16,11 @@ const Home: React.FC<Props> = ({ navigation }) => {
     activitiesLogged: 0,
     movementsLogged: 0,
   });
+  const [recentLogs, setRecentLogs] = useState({
+    foodLogs: [],
+    activityLogs: [],
+    movementLogs: []
+  });
 
   useEffect(() => {
     loadDashboardData();
@@ -30,10 +35,18 @@ const Home: React.FC<Props> = ({ navigation }) => {
       
       // Parse food logs to count today's meals
       let mealsCount = 0;
+      let foodLogsData = [];
       if (foodLogs) {
-        const logs = JSON.parse(foodLogs);
-        mealsCount = logs.length;
+        foodLogsData = JSON.parse(foodLogs);
+        mealsCount = foodLogsData.length;
       }
+
+      // Load recent logs for display
+      setRecentLogs({
+        foodLogs: foodLogsData.slice(0, 3), // Show last 3 food logs
+        activityLogs: lastActivity ? [{ description: lastActivity, timestamp: new Date().toISOString() }] : [],
+        movementLogs: lastMovement ? [{ description: lastMovement, timestamp: new Date().toISOString() }] : []
+      });
 
       // Simulate some progress data (in a real app, this would come from your backend)
       setDashboardData({
@@ -100,6 +113,53 @@ const Home: React.FC<Props> = ({ navigation }) => {
               </Card.Content>
             </Card>
           </View>
+
+          {/* Recent Logs */}
+          <Card style={styles.recentLogsCard}>
+            <Card.Content>
+              <Text style={styles.cardTitle}>📋 Recent Logs</Text>
+              
+              {/* Food Logs */}
+              {recentLogs.foodLogs.length > 0 && (
+                <View style={styles.logSection}>
+                  <Text style={styles.logSectionTitle}>🍽️ Food</Text>
+                  {recentLogs.foodLogs.map((log, index) => (
+                    <View key={index} style={styles.logItem}>
+                      <Text style={styles.logText}>{log.name}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Activity Logs */}
+              {recentLogs.activityLogs.length > 0 && (
+                <View style={styles.logSection}>
+                  <Text style={styles.logSectionTitle}>📊 Activity</Text>
+                  {recentLogs.activityLogs.map((log, index) => (
+                    <View key={index} style={styles.logItem}>
+                      <Text style={styles.logText}>{log.description}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Movement Logs */}
+              {recentLogs.movementLogs.length > 0 && (
+                <View style={styles.logSection}>
+                  <Text style={styles.logSectionTitle}>💪 Movement</Text>
+                  {recentLogs.movementLogs.map((log, index) => (
+                    <View key={index} style={styles.logItem}>
+                      <Text style={styles.logText}>{log.description}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {recentLogs.foodLogs.length === 0 && recentLogs.activityLogs.length === 0 && recentLogs.movementLogs.length === 0 && (
+                <Text style={styles.noLogsText}>No recent logs. Start logging your activities!</Text>
+              )}
+            </Card.Content>
+          </Card>
 
           {/* Quick Actions */}
           <Card style={styles.quickActionsCard}>
@@ -221,5 +281,36 @@ const styles = StyleSheet.create({
     color: '#B39DDB',
     lineHeight: 20,
     textAlign: 'center',
+  },
+  recentLogsCard: {
+    marginBottom: 20,
+    elevation: 2,
+    borderRadius: 16,
+    backgroundColor: '#2D2B55',
+  },
+  logSection: {
+    marginBottom: 12,
+  },
+  logSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E1BEE7',
+    marginBottom: 8,
+  },
+  logItem: {
+    backgroundColor: '#1A1B2E',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  logText: {
+    fontSize: 14,
+    color: '#B39DDB',
+  },
+  noLogsText: {
+    fontSize: 14,
+    color: '#B39DDB',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

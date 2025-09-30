@@ -31,8 +31,29 @@ const Activity = () => {
   const [autoLogged, setAutoLogged] = useState(false);
   const [isMultiScreen, setIsMultiScreen] = useState(false);
   const [progress, setProgress] = useState<{current: number, total: number} | null>(null);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const route = useRoute();
   const navigation = useNavigation();
+
+  // Load recent activities
+  useEffect(() => {
+    loadRecentActivities();
+  }, []);
+
+  const loadRecentActivities = async () => {
+    try {
+      const lastActivity = await AsyncStorage.getItem('lastActivity');
+      if (lastActivity) {
+        setRecentActivities([{
+          id: Date.now().toString(),
+          description: lastActivity,
+          timestamp: new Date().toISOString()
+        }]);
+      }
+    } catch (error) {
+      console.error('Error loading recent activities:', error);
+    }
+  };
 
   // Handle incoming activity data from navigation
   useEffect(() => {
@@ -155,6 +176,23 @@ const Activity = () => {
           </Card.Content>
         </Card>
 
+        {/* Recent Activities */}
+        {recentActivities.length > 0 && (
+          <Card style={styles.recentCard}>
+            <Card.Content>
+              <Text style={styles.recentTitle}>📋 Recent Activities</Text>
+              {recentActivities.map((item) => (
+                <View key={item.id} style={styles.recentItem}>
+                  <Text style={styles.recentText}>{item.description}</Text>
+                  <Text style={styles.recentTime}>
+                    {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+              ))}
+            </Card.Content>
+          </Card>
+        )}
+
         <Snackbar
           visible={snackbarVisible}
           onDismiss={() => setSnackbarVisible(false)}
@@ -217,5 +255,32 @@ const styles = StyleSheet.create({
   },
   snackbar: {
     backgroundColor: '#43A047',
+  },
+  recentCard: {
+    marginTop: 20,
+    elevation: 2,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  recentTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#DB7670',
+    marginBottom: 12,
+  },
+  recentItem: {
+    backgroundColor: '#FFE6E8',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  recentText: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 4,
+  },
+  recentTime: {
+    fontSize: 12,
+    color: '#666',
   },
 });

@@ -49,6 +49,23 @@ export default function VoiceButton({ onTranscriptionChange, onRecordingChange, 
     // Remove repeated number phrases (like "10000 and 10000")
     cleaned = cleaned.replace(/\b(\d+)\s+and\s+\1\b/g, '$1');
     
+    // More aggressive repetition removal
+    // Remove repeated 2-word phrases
+    cleaned = cleaned.replace(/\b(\w+\s+\w+)\s+\1\b/g, '$1');
+    
+    // Remove repeated 3-word phrases
+    cleaned = cleaned.replace(/\b(\w+\s+\w+\s+\w+)\s+\1\b/g, '$1');
+    
+    // Remove repeated 4-word phrases
+    cleaned = cleaned.replace(/\b(\w+\s+\w+\s+\w+\s+\w+)\s+\1\b/g, '$1');
+    
+    // Remove repeated patterns like "and and and"
+    cleaned = cleaned.replace(/\b(and)\s+\1\s+\1\b/g, 'and');
+    cleaned = cleaned.replace(/\b(and)\s+\1\b/g, 'and');
+    
+    // Remove repeated patterns like "completed completed completed"
+    cleaned = cleaned.replace(/\b(\w+)\s+\1\s+\1\b/g, '$1');
+    
     // Clean up extra spaces
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
     
@@ -175,8 +192,8 @@ export default function VoiceButton({ onTranscriptionChange, onRecordingChange, 
       resultCountRef.current += 1;
       console.log('🎤 VoiceButton: Same result repeated', resultCountRef.current, 'times');
       
-      // If we've seen the same result more than 3 times, stop the recognition
-      if (resultCountRef.current > 3) {
+      // If we've seen the same result more than 2 times, stop the recognition
+      if (resultCountRef.current > 2) {
         console.log('🎤 VoiceButton: Too many repeated results, stopping recognition');
         if (recording) {
           onStopRecord();
@@ -200,16 +217,22 @@ export default function VoiceButton({ onTranscriptionChange, onRecordingChange, 
       const currentText = currentTranscriptionRef.current.toLowerCase();
       const newText = cleanedNewText.toLowerCase();
       
-      // More aggressive repetition detection
-      const isRepetition = currentText && (
-        newText === currentText || 
-        newText.includes(currentText) && newText.length <= currentText.length * 1.2
-      );
-      
-      if (isRepetition) {
-        console.log('🎤 VoiceButton: Repetition detected, ignoring:', cleanedNewText);
-        return;
-      }
+    // More aggressive repetition detection
+    const isRepetition = currentText && (
+      newText === currentText || 
+      newText.includes(currentText) && newText.length <= currentText.length * 1.05 ||
+      newText.split(' ').length <= currentText.split(' ').length + 1 && 
+      newText.split(' ').every(word => currentText.includes(word)) ||
+      // Check for repeated phrases
+      newText.split(' ').length > 2 && 
+      newText.split(' ').slice(0, Math.floor(newText.split(' ').length / 2)).join(' ') === 
+      newText.split(' ').slice(Math.floor(newText.split(' ').length / 2)).join(' ')
+    );
+    
+    if (isRepetition) {
+      console.log('🎤 VoiceButton: Repetition detected, ignoring:', cleanedNewText);
+      return;
+    }
       
       if (currentText && newText.includes(currentText) && newText.length > currentText.length) {
         // This is a continuation, use the longer text
@@ -393,7 +416,20 @@ export default function VoiceButton({ onTranscriptionChange, onRecordingChange, 
     }
     
     // Process navigation immediately without delay
-    const finalTranscription = cleanRepeatedWords(currentTranscriptionRef.current);
+    let finalTranscription = cleanRepeatedWords(currentTranscriptionRef.current);
+    
+    // Apply cleaning multiple times to catch all repetitions
+    let previousLength = finalTranscription.length;
+    let cleanedTranscription = cleanRepeatedWords(finalTranscription);
+    let iterations = 0;
+    
+    while (cleanedTranscription.length !== previousLength && iterations < 3) {
+      previousLength = cleanedTranscription.length;
+      cleanedTranscription = cleanRepeatedWords(cleanedTranscription);
+      iterations++;
+    }
+    
+    finalTranscription = cleanedTranscription;
     console.log('🛑 VoiceButton: Processing final transcription:', finalTranscription);
     handleNavigation(finalTranscription);
   };

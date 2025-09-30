@@ -83,12 +83,13 @@ export const extractFoodData = (text) => {
   }
 
   // Extract meal types
-  const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'brunch'];
+  const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'snacks', 'brunch'];
   for (const meal of mealTypes) {
     if (lowerText.includes(meal)) {
-      data.meal = meal;
+      // Convert 'snack' to 'snacks' for consistency
+      data.meal = meal === 'snack' ? 'snacks' : meal;
       if (!data.description) {
-        data.description = `Had ${meal}`;
+        data.description = `Had ${data.meal}`;
       }
       break;
     }
