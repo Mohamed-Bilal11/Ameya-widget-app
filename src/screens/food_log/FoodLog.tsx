@@ -14,8 +14,9 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeModules } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import BottomNavigation from '../../components/BottomNavigation';
+import { completeCurrentScreen, getCurrentProgress } from '../../services/SequentialNavigationService';
 
 type FoodData = {
   originalText: string;
@@ -29,6 +30,9 @@ type FoodData = {
 
 type RouteParams = {
   foodData?: FoodData;
+  isMultiScreen?: boolean;
+  sequenceIndex?: number;
+  totalScreens?: number;
 };
 
 const { WidgetUpdater } = NativeModules;
@@ -42,8 +46,11 @@ const FoodLog = () => {
   const [food, setFood] = useState('');
   const [logs, setLogs] = useState<FoodItem[]>([]);
   const [autoLogged, setAutoLogged] = useState(false);
+  const [isMultiScreen, setIsMultiScreen] = useState(false);
+  const [progress, setProgress] = useState<{current: number, total: number} | null>(null);
   const mountedRef = useRef(true);
   const route = useRoute();
+  const navigation = useNavigation();
 
   useEffect(() => {
     mountedRef.current = true;
@@ -63,7 +70,28 @@ const FoodLog = () => {
 
   // Handle incoming food data from navigation
   useEffect(() => {
-    const foodData = (route.params as RouteParams)?.foodData;
+    const routeParams = route.params as RouteParams;
+    const foodData = routeParams?.foodData;
+    const isMultiScreenMode = routeParams?.isMultiScreen;
+    const sequenceIndex = routeParams?.sequenceIndex;
+    const totalScreens = routeParams?.totalScreens;
+    
+    console.log('🍽️ FoodLog: Route params:', {
+      foodData: !!foodData,
+      isMultiScreenMode,
+      sequenceIndex,
+      totalScreens
+    });
+    
+    if (isMultiScreenMode) {
+      console.log('🍽️ FoodLog: Setting multi-screen mode');
+      setIsMultiScreen(true);
+      if (sequenceIndex !== undefined && totalScreens !== undefined) {
+        setProgress({ current: sequenceIndex + 1, total: totalScreens });
+        console.log('🍽️ FoodLog: Set progress:', { current: sequenceIndex + 1, total: totalScreens });
+      }
+    }
+    
     if (foodData && !autoLogged) {
       console.log('📊 Received food data:', foodData);
       
@@ -74,15 +102,19 @@ const FoodLog = () => {
         // Auto-log the food if it contains specific data
         if (foodData.food || foodData.meal) {
           setTimeout(() => {
-            handleAutoLog(foodData);
+            // Pass the multi-screen state directly to handleAutoLog
+            handleAutoLog(foodData, isMultiScreenMode);
           }, 1000); // Small delay to show the user what's happening
         }
       }
     }
-  }, [(route.params as RouteParams)?.foodData, autoLogged]);
+  }, [route.params, autoLogged]);
 
-  const handleAutoLog = async (foodData: FoodData) => {
+  const handleAutoLog = async (foodData: FoodData, isMultiScreenParam?: boolean) => {
     try {
+      console.log('🤖 Auto-logging food data:', foodData);
+      const shouldAdvance = isMultiScreenParam !== undefined ? isMultiScreenParam : isMultiScreen;
+      console.log('🤖 FoodLog: isMultiScreen state:', isMultiScreen, 'isMultiScreenParam:', isMultiScreenParam, 'shouldAdvance:', shouldAdvance);
       const newLog = { id: Date.now().toString(), name: foodData.description?.trim() || foodData.originalText };
       const updatedLogs = [newLog, ...logs];
 
@@ -99,6 +131,17 @@ const FoodLog = () => {
       setAutoLogged(true);
       setFood('');
       console.log('✅ Auto-logged food:', foodData.description);
+      
+      // If this is part of a multi-screen sequence, move to next screen
+      console.log('🔄 FoodLog: Checking if multi-screen:', shouldAdvance);
+      if (shouldAdvance) {
+        console.log('🚀 FoodLog: Calling completeCurrentScreen');
+        await completeCurrentScreen(navigation, () => {
+          console.log('🍽️ Food logging completed, moving to next screen');
+        });
+      } else {
+        console.log('❌ FoodLog: Not in multi-screen mode, staying on current screen');
+      }
     } catch (error) {
       console.error('❌ Error auto-logging food:', error);
     }
@@ -107,6 +150,7 @@ const FoodLog = () => {
   const addFood = async () => {
     if (!food.trim()) return;
 
+    console.log('🍽️ Manual food logging:', food);
     const newLog = { id: Date.now().toString(), name: food.trim() };
     const updatedLogs = [newLog, ...logs];
 
@@ -123,6 +167,13 @@ const FoodLog = () => {
         setLogs(updatedLogs);
       });
     }
+    
+    // If this is part of a multi-screen sequence, move to next screen
+    if (isMultiScreen) {
+      await completeCurrentScreen(navigation, () => {
+        console.log('🍽️ Food logging completed, moving to next screen');
+      });
+    }
   };
 
   return (
@@ -133,6 +184,14 @@ const FoodLog = () => {
       >
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
           <Text style={styles.header}>🍱 Food Log</Text>
+          
+          {isMultiScreen && progress && (
+            <View style={styles.progressContainer}>
+              <Text style={styles.progressText}>
+                🍽️ Logging Food ({progress.current}/{progress.total})
+              </Text>
+            </View>
+          )}
 
           <TextInput
             style={styles.input}
@@ -195,6 +254,20 @@ const styles = StyleSheet.create({
     color: '#467267',
     textAlign: 'center',
     marginBottom: 40,
+  },
+  progressContainer: {
+    backgroundColor: '#E3F2FD',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1565C0',
+  },
+  progressText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1565C0',
+    textAlign: 'center',
   },
   subHeader: {
     fontSize: 20,

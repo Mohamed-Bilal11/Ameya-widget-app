@@ -1,10 +1,11 @@
 import React, {useState, useEffect} from 'react';
-import {StyleSheet, ScrollView, Keyboard} from 'react-native';
+import {StyleSheet, ScrollView, Keyboard, View} from 'react-native';
 import {Text, TextInput, Button, Snackbar, Card} from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {NativeModules} from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import BottomNavigation from '../../components/BottomNavigation';
+import { completeCurrentScreen, getCurrentProgress } from '../../services/SequentialNavigationService';
 
 type MovementData = {
   originalText: string;
@@ -18,6 +19,9 @@ type MovementData = {
 
 type RouteParams = {
   movementData?: MovementData;
+  isMultiScreen?: boolean;
+  sequenceIndex?: number;
+  totalScreens?: number;
 };
 
 const {WidgetUpdater} = NativeModules;
@@ -26,11 +30,26 @@ const Movements = () => {
   const [exercise, setExercise] = useState('');
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [autoLogged, setAutoLogged] = useState(false);
+  const [isMultiScreen, setIsMultiScreen] = useState(false);
+  const [progress, setProgress] = useState<{current: number, total: number} | null>(null);
   const route = useRoute();
+  const navigation = useNavigation();
 
   // Handle incoming movement data from navigation
   useEffect(() => {
-    const movementData = (route.params as RouteParams)?.movementData;
+    const routeParams = route.params as RouteParams;
+    const movementData = routeParams?.movementData;
+    const isMultiScreenMode = routeParams?.isMultiScreen;
+    const sequenceIndex = routeParams?.sequenceIndex;
+    const totalScreens = routeParams?.totalScreens;
+    
+    if (isMultiScreenMode) {
+      setIsMultiScreen(true);
+      if (sequenceIndex !== undefined && totalScreens !== undefined) {
+        setProgress({ current: sequenceIndex + 1, total: totalScreens });
+      }
+    }
+    
     if (movementData && !autoLogged) {
       console.log('📊 Received movement data:', movementData);
       
@@ -41,16 +60,18 @@ const Movements = () => {
         // Auto-log the movement if it contains specific data
         if (movementData.exercise || movementData.duration) {
           setTimeout(() => {
-            handleAutoLog(movementData);
+            // Pass the multi-screen state directly to handleAutoLog
+            handleAutoLog(movementData, isMultiScreenMode);
           }, 1000); // Small delay to show the user what's happening
         }
       }
     }
-  }, [(route.params as RouteParams)?.movementData, autoLogged]);
+  }, [route.params, autoLogged]);
 
-  const handleAutoLog = async (movementData: MovementData) => {
+  const handleAutoLog = async (movementData: MovementData, isMultiScreenParam?: boolean) => {
     try {
       console.log('🤖 Auto-logging movement data:', movementData);
+      const shouldAdvance = isMultiScreenParam !== undefined ? isMultiScreenParam : isMultiScreen;
       const message = `Hey! Log Movement: ${movementData.description}`;
       await AsyncStorage.setItem('lastMovement', movementData.description);
       await AsyncStorage.setItem('widget_text', message);
@@ -60,6 +81,13 @@ const Movements = () => {
       setAutoLogged(true);
       setSnackbarVisible(true);
       console.log('✅ Auto-logged movement:', movementData.description);
+      
+      // If this is part of a multi-screen sequence, move to next screen
+      if (shouldAdvance) {
+        await completeCurrentScreen(navigation, () => {
+          console.log('💪 Movement logging completed, moving to next screen');
+        });
+      }
     } catch (error) {
       console.error('❌ Error auto-logging movement:', error);
     }
@@ -83,12 +111,27 @@ const Movements = () => {
     setExercise('');
     setSnackbarVisible(true);
     Keyboard.dismiss();
+    
+    // If this is part of a multi-screen sequence, move to next screen
+    if (isMultiScreen) {
+      await completeCurrentScreen(navigation, () => {
+        console.log('💪 Movement logging completed, moving to next screen');
+      });
+    }
   };
 
   return (
     <>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>💪 Movements Log</Text>
+        
+        {isMultiScreen && progress && (
+          <View style={styles.progressContainer}>
+            <Text style={styles.progressText}>
+              💪 Logging Movement ({progress.current}/{progress.total})
+            </Text>
+          </View>
+        )}
 
         <Card style={styles.card}>
           <Card.Content>
@@ -149,6 +192,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     color: '#1565C0',
+  },
+  progressContainer: {
+    backgroundColor: '#E3F2FD',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1565C0',
+  },
+  progressText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1565C0',
+    textAlign: 'center',
   },
   card: {
     backgroundColor: '#FFFFFF',

@@ -34,7 +34,6 @@ export const extractActivityData = (text) => {
     data.value = parseInt(stepsMatch[1]);
     data.unit = 'steps';
     data.description = `Walked ${stepsMatch[1]} steps`;
-    return data;
   }
 
   // Extract heart rate data (smartwatch health metric)
@@ -44,7 +43,6 @@ export const extractActivityData = (text) => {
     data.value = parseInt(heartRateMatch[1]);
     data.unit = 'bpm';
     data.description = `Heart rate: ${heartRateMatch[1]} bpm`;
-    return data;
   }
 
   // Extract calories burned (smartwatch health metric)
@@ -54,7 +52,6 @@ export const extractActivityData = (text) => {
     data.value = parseInt(caloriesMatch[1]);
     data.unit = 'calories';
     data.description = `Burned ${caloriesMatch[1]} calories`;
-    return data;
   }
 
   // Extract walking distance (smartwatch health metric)
@@ -64,7 +61,6 @@ export const extractActivityData = (text) => {
     data.value = parseFloat(distanceMatch[1]);
     data.unit = distanceMatch[2];
     data.description = `Walked ${distanceMatch[0]}`;
-    return data;
   }
 
   // Extract sleep data (smartwatch health metric)
@@ -78,10 +74,42 @@ export const extractActivityData = (text) => {
   }
 
   // Extract general health metrics
-  if (lowerText.includes('walking') || lowerText.includes('walked')) {
+  if (lowerText.includes('walking') || lowerText.includes('walked') || lowerText.includes('walk')) {
     data.type = 'walking';
     data.description = 'Walking activity recorded';
     return data;
+  }
+
+  // Try to extract activity-related phrases from the text
+  const activityPhrases = [
+    /walked\s+(\d+(?:\.\d+)?)\s*(?:km|kilometers?|miles?|m|meters?)/gi,
+    /burned\s+(\d+)\s*(?:calories?|cal)/gi,
+    /(\d+)\s*(?:steps?|step)/gi
+  ];
+  
+  for (const pattern of activityPhrases) {
+    const match = pattern.exec(lowerText);
+    if (match) {
+      if (pattern.source.includes('walked')) {
+        data.type = 'distance';
+        data.value = parseFloat(match[1]);
+        data.unit = 'km';
+        data.description = `Walked ${match[1]} km`;
+        return data;
+      } else if (pattern.source.includes('burned')) {
+        data.type = 'calories';
+        data.value = parseInt(match[1]);
+        data.unit = 'calories';
+        data.description = `Burned ${match[1]} calories`;
+        return data;
+      } else if (pattern.source.includes('steps')) {
+        data.type = 'steps';
+        data.value = parseInt(match[1]);
+        data.unit = 'steps';
+        data.description = `Walked ${match[1]} steps`;
+        return data;
+      }
+    }
   }
 
   // If no specific data found, return the original text as description
@@ -96,20 +124,33 @@ export const extractActivityData = (text) => {
  */
 export const isActivityRelated = (text) => {
   if (!text || typeof text !== 'string') {
+    console.log('❌ ActivityDataExtractor: Invalid text input');
     return false;
   }
 
   const lowerText = text.toLowerCase().trim();
+  console.log('🔍 ActivityDataExtractor: Checking text:', lowerText);
   
   const activityKeywords = [
     'steps', 'step', 'walked', 'walking', 'walk',
-    'distance', 'km', 'kilometers', 'miles', 'meters', 'm',
+    'distance', 'km', 'kilometers', 'miles', 'meters',
     'calories', 'cal', 'burned', 'burn',
     'heart rate', 'bpm', 'hr', 'pulse',
     'sleep', 'slept', 'sleeping',
     'activity', 'activities', 'track', 'tracking', 'monitor', 'monitoring',
-    'pedometer', 'fitness', 'health', 'wellness', 'smartwatch', 'watch'
+    'pedometer', 'fitness', 'health', 'wellness', 'smartwatch', 'watch',
+    'smart watch', 'fitbit', 'apple watch', 'samsung watch', 'garmin'
   ];
 
-  return activityKeywords.some(keyword => lowerText.includes(keyword));
+  const foundKeywords = activityKeywords.filter(keyword => {
+    // Use word boundary regex for more precise matching
+    const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+    return regex.test(lowerText);
+  });
+  console.log('📊 ActivityDataExtractor: Found keywords:', foundKeywords);
+  
+  const isRelated = foundKeywords.length > 0;
+  console.log('📊 ActivityDataExtractor: Is activity related:', isRelated);
+  
+  return isRelated;
 };

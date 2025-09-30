@@ -4,9 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import TextInputComponent from './TextInput';
 import ActionButtons from './ActionButtons';
 import { processTextNavigation } from '../../services/TextNavigationService';
-import { extractActivityData, isActivityRelated } from '../../services/ActivityDataExtractor';
-import { extractFoodData, isFoodRelated } from '../../services/FoodDataExtractor';
-import { extractMovementData, isMovementRelated } from '../../services/MovementDataExtractor';
+import { extractAllDataTypes, startSequentialNavigation } from '../../services/SequentialNavigationService';
 
 const TextInputNavigation = () => {
   const [text, setText] = useState('');
@@ -21,31 +19,42 @@ const TextInputNavigation = () => {
 
     setIsProcessing(true);
     try {
-      const result = await processTextNavigation(text.trim());
-      console.log('🤖 Navigation Result:', result);
+      console.log('🧭 TextInputNavigation: Processing text:', text.trim());
       
-      // Use screen-specific data extractors and navigation
-      if (isFoodRelated(text.trim())) {
-        console.log('🧭 Food-related text detected, navigating to FoodLogs');
-        const foodData = extractFoodData(text.trim());
-        navigation.navigate('FoodLogs', { foodData: foodData });
+      // Extract all data types from the text using SequentialNavigationService
+      const allData = extractAllDataTypes(text.trim());
+      console.log('🧭 TextInputNavigation: Extracted data types:', {
+        foodData: allData.foodData,
+        activityData: allData.activityData,
+        movementData: allData.movementData,
+        screens: allData.screens
+      });
+      
+      // Check if we have multiple data types (sequential navigation)
+      if (allData.screens.length > 1) {
+        console.log('🚀 TextInputNavigation: Multiple data types detected, starting sequential navigation through', allData.screens.length, 'screens');
+        startSequentialNavigation(navigation, allData.screens);
         setText('');
-      } else if (isMovementRelated(text.trim())) {
-        console.log('🧭 Movement-related text detected, navigating to Movements');
-        const movementData = extractMovementData(text.trim());
-        navigation.navigate('Movements', { movementData: movementData });
+      } else if (allData.screens.length === 1) {
+        // Single data type - direct navigation
+        const screen = allData.screens[0];
+        console.log('🧭 TextInputNavigation: Single data type detected, navigating to:', screen.name);
+        navigation.navigate(screen.name, {
+          [screen.dataKey]: screen.data
+        });
         setText('');
-      } else if (isActivityRelated(text.trim())) {
-        console.log('🧭 Activity-related text detected, navigating to Activity');
-        const activityData = extractActivityData(text.trim());
-        navigation.navigate('Activity', { activityData: activityData });
-        setText('');
-      } else if (result.screen) {
-        navigation.navigate(result.screen);
-        console.log('🧹 Clearing text input after navigation');
-        setText(''); // Clear input after successful navigation
       } else {
-        Alert.alert('Navigation', 'Could not determine navigation');
+        // Fallback to old navigation system
+        const result = await processTextNavigation(text.trim());
+        console.log('🤖 TextInputNavigation: Fallback navigation result:', result);
+        
+        if (result.screen) {
+          navigation.navigate(result.screen);
+          console.log('🧹 Clearing text input after navigation');
+          setText('');
+        } else {
+          Alert.alert('Navigation', 'Could not determine navigation');
+        }
       }
     } catch (error) {
       console.error('Navigation Error:', error);

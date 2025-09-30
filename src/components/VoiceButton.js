@@ -10,8 +10,50 @@ import TextInputNavigation from './ui/TextInputNavigation';
 import { extractActivityData, isActivityRelated } from '../services/ActivityDataExtractor';
 import { extractFoodData, isFoodRelated } from '../services/FoodDataExtractor';
 import { extractMovementData, isMovementRelated } from '../services/MovementDataExtractor';
+import { extractAllDataTypes, startSequentialNavigation } from '../services/SequentialNavigationService';
 
 export default function VoiceButton({ onTranscriptionChange, onRecordingChange, onLoadingChange }) {
+  // Helper function to clean up repeated words in speech recognition
+  const cleanRepeatedWords = (text) => {
+    if (!text || typeof text !== 'string') return text;
+    
+    // Split into words and remove consecutive duplicates
+    const words = text.split(/\s+/);
+    const cleanedWords = [];
+    
+    for (let i = 0; i < words.length; i++) {
+      const currentWord = words[i].toLowerCase();
+      const lastWord = cleanedWords[cleanedWords.length - 1]?.toLowerCase();
+      
+      // Only add if it's not the same as the previous word
+      if (currentWord !== lastWord) {
+        cleanedWords.push(words[i]);
+      }
+    }
+    
+    // Join and clean up extra spaces
+    let cleaned = cleanedWords.join(' ').trim();
+    
+    // Remove extra "and" words that might be left over
+    cleaned = cleaned.replace(/\s+and\s+and\s+/g, ' and ');
+    
+    // Remove repeated phrases (like "I had and I had")
+    cleaned = cleaned.replace(/\b(\w+\s+\w+)\s+\1\b/g, '$1');
+    
+    // Remove repeated single words that might have slipped through
+    cleaned = cleaned.replace(/\b(\w+)\s+\1\b/g, '$1');
+    
+    // Remove repeated longer phrases (like "I completed 10000 and I completed 10000")
+    cleaned = cleaned.replace(/\b(I\s+\w+\s+\d+)\s+and\s+\1\b/g, '$1');
+    
+    // Remove repeated number phrases (like "10000 and 10000")
+    cleaned = cleaned.replace(/\b(\d+)\s+and\s+\1\b/g, '$1');
+    
+    // Clean up extra spaces
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    return cleaned;
+  };
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -21,6 +63,7 @@ export default function VoiceButton({ onTranscriptionChange, onRecordingChange, 
   const lastResultTime = useRef(0);
   const resultCountRef = useRef(0);
   const lastResultTextRef = useRef('');
+  const speechTimeoutRef = useRef(null);
 
   // Debug logging for state changes
   useEffect(() => {
@@ -132,8 +175,8 @@ export default function VoiceButton({ onTranscriptionChange, onRecordingChange, 
       resultCountRef.current += 1;
       console.log('🎤 VoiceButton: Same result repeated', resultCountRef.current, 'times');
       
-      // If we've seen the same result more than 5 times, stop the recognition
-      if (resultCountRef.current > 5) {
+      // If we've seen the same result more than 3 times, stop the recognition
+      if (resultCountRef.current > 3) {
         console.log('🎤 VoiceButton: Too many repeated results, stopping recognition');
         if (recording) {
           onStopRecord();
@@ -148,26 +191,82 @@ export default function VoiceButton({ onTranscriptionChange, onRecordingChange, 
     
     console.log('🎤 VoiceButton: Received speech result:', text, 'isFinal:', result?.isFinal);
     
-    // Only update if we have new meaningful content
+    // Improved text accumulation with aggressive repetition prevention
     if (newTranscription !== currentTranscriptionRef.current) {
-      setTranscription(newTranscription);
-      currentTranscriptionRef.current = newTranscription;
+      // Clean the new transcription to remove repeated words
+      const cleanedNewText = cleanRepeatedWords(newTranscription);
+      
+      // Check if this is just a repetition of what we already have
+      const currentText = currentTranscriptionRef.current.toLowerCase();
+      const newText = cleanedNewText.toLowerCase();
+      
+      // More aggressive repetition detection
+      const isRepetition = currentText && (
+        newText === currentText || 
+        newText.includes(currentText) && newText.length <= currentText.length * 1.2
+      );
+      
+      if (isRepetition) {
+        console.log('🎤 VoiceButton: Repetition detected, ignoring:', cleanedNewText);
+        return;
+      }
+      
+      if (currentText && newText.includes(currentText) && newText.length > currentText.length) {
+        // This is a continuation, use the longer text
+        setTranscription(cleanedNewText);
+        currentTranscriptionRef.current = cleanedNewText;
+        console.log('🎤 VoiceButton: Continuation detected, using longer text:', cleanedNewText);
+      } else if (!currentTranscriptionRef.current) {
+        // This is the first result
+        setTranscription(cleanedNewText);
+        currentTranscriptionRef.current = cleanedNewText;
+        console.log('🎤 VoiceButton: First result:', cleanedNewText);
+      } else {
+        // Check if this is a meaningful addition (not just repetition)
+        const currentWords = currentText.split(' ');
+        const newWords = newText.split(' ');
+        
+        // Count unique new words that are meaningful
+        const uniqueNewWords = newWords.filter(word => 
+          word.length > 2 && !currentWords.includes(word)
+        );
+        
+        // Only append if there are genuinely new meaningful words
+        if (uniqueNewWords.length > 0) {
+          const combinedText = currentTranscriptionRef.current + ' ' + cleanedNewText;
+          const cleanedCombined = cleanRepeatedWords(combinedText);
+          setTranscription(cleanedCombined);
+          currentTranscriptionRef.current = cleanedCombined;
+          console.log('🎤 VoiceButton: New content appended:', cleanedCombined);
+        } else {
+          console.log('🎤 VoiceButton: No meaningful new content detected, ignoring repetition');
+        }
+      }
       
       if (result?.isFinal) {
-        console.log('🎤 VoiceButton: Final transcription:', newTranscription);
+        console.log('🎤 VoiceButton: Final transcription:', cleanedNewText);
+        console.log('🎤 VoiceButton: Complete accumulated text:', currentTranscriptionRef.current);
       } else {
-        console.log('🎤 VoiceButton: Partial transcription:', newTranscription);
+        console.log('🎤 VoiceButton: Partial transcription:', cleanedNewText);
       }
     }
     
-    // If this is a final result, stop the speech recognition to prevent infinite loops
+    // If this is a final result, wait a bit longer to see if there are more results
     if (result?.isFinal) {
-      console.log('🎤 VoiceButton: Final result received, stopping speech recognition');
-      setTimeout(() => {
-        if (recording) {
+      console.log('🎤 VoiceButton: Final result received, waiting for more results...');
+      
+      // Clear any existing timeout
+      if (speechTimeoutRef.current) {
+        clearTimeout(speechTimeoutRef.current);
+      }
+      
+      // Set a timeout to process the complete sentence after a short delay
+      speechTimeoutRef.current = setTimeout(() => {
+        if (recording && currentTranscriptionRef.current) {
+          console.log('🎤 VoiceButton: Processing accumulated text after delay:', currentTranscriptionRef.current);
           onStopRecord();
         }
-      }, 1000); // Give a small delay to allow the result to be processed
+      }, 2000); // Wait 2 seconds for more speech input
     }
   };
 
@@ -200,22 +299,8 @@ export default function VoiceButton({ onTranscriptionChange, onRecordingChange, 
     console.log('🧭 Processing text:', lower);
     console.log('🧭 Text length:', lower.length);
     
-    // Use screen-specific data extractors and navigation
-    const isFood = isFoodRelated(text);
-    const isMovement = isMovementRelated(text);
-    const isActivity = isActivityRelated(text);
-    
-    
     const hasHelp = lower.includes('what can i say') || lower.includes('voice commands') || lower.includes('available commands') ||
                    lower.includes('help me') || lower.includes('what commands') || lower.includes('show commands');
-    
-    console.log('🧭 Screen-specific detection:', {
-      isFood,
-      isMovement,
-      isActivity,
-      hasHelp,
-      text: lower
-    });
     
     if (hasHelp) {
       console.log('🧭 Showing voice commands help');
@@ -225,20 +310,31 @@ export default function VoiceButton({ onTranscriptionChange, onRecordingChange, 
       console.log('• "Go to activity" or "Exercise" - Navigate to activity tracking');
       console.log('• "Go to movements" or "Steps" - Navigate to movement tracking');
       console.log('• "Home" - Navigate to home screen');
-    } else if (isFood) {
-      console.log('🧭 Food-related text detected, navigating to FoodLogs');
-      const foodData = extractFoodData(text);
-      navigation.navigate('FoodLogs', { foodData: foodData });
-    } else if (isMovement) {
-      console.log('🧭 Movement-related text detected, navigating to Movements');
-      const movementData = extractMovementData(text);
-      navigation.navigate('Movements', { movementData: movementData });
-    } else if (isActivity) {
-      console.log('🧭 Activity-related text detected, navigating to Activity');
-      const activityData = extractActivityData(text);
-      navigation.navigate('Activity', { activityData: activityData });
+      return;
+    }
+    
+    // Extract all data types from the text
+    const allData = extractAllDataTypes(text);
+    console.log('🧭 Extracted data types:', {
+      foodData: allData.foodData,
+      activityData: allData.activityData,
+      movementData: allData.movementData,
+      screens: allData.screens
+    });
+    
+    // Check if we have multiple data types (sequential navigation)
+    if (allData.screens.length > 1) {
+      console.log('🚀 Multiple data types detected, starting sequential navigation through', allData.screens.length, 'screens');
+      startSequentialNavigation(navigation, allData.screens);
+    } else if (allData.screens.length === 1) {
+      // Single data type - direct navigation
+      const screen = allData.screens[0];
+      console.log('🧭 Single data type detected, navigating to:', screen.name);
+      navigation.navigate(screen.name, {
+        [screen.dataKey]: screen.data
+      });
     } else {
-      console.log('🧭 No keywords found, navigating to Home (default)');
+      console.log('🧭 No data types detected, navigating to Home (default)');
       navigation.navigate('Home');
     }
     
@@ -252,6 +348,12 @@ export default function VoiceButton({ onTranscriptionChange, onRecordingChange, 
     setRecording(true);
     setLoading(false); // Don't show loading, just start recording
     console.log('🎤 VoiceButton: Starting new recording session');
+    
+    // Clear any existing timeout
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
     
     // Reset counters for new recording session
     resultCountRef.current = 0;
@@ -291,7 +393,7 @@ export default function VoiceButton({ onTranscriptionChange, onRecordingChange, 
     }
     
     // Process navigation immediately without delay
-    const finalTranscription = currentTranscriptionRef.current;
+    const finalTranscription = cleanRepeatedWords(currentTranscriptionRef.current);
     console.log('🛑 VoiceButton: Processing final transcription:', finalTranscription);
     handleNavigation(finalTranscription);
   };

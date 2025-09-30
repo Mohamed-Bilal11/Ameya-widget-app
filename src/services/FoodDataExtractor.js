@@ -29,7 +29,7 @@ export const extractFoodData = (text) => {
   
   // Extract food items
   const foodItems = [
-    'breakfast', 'lunch', 'dinner', 'snack', 'meal',
+    'breakfast', 'lunch', 'dinner', 'snack', 'snacks', 'meal',
     'apple', 'banana', 'orange', 'grapes', 'strawberry',
     'bread', 'toast', 'sandwich', 'pizza', 'pasta',
     'rice', 'chicken', 'beef', 'fish', 'salmon',
@@ -37,15 +37,38 @@ export const extractFoodData = (text) => {
     'coffee', 'tea', 'water', 'juice', 'soda',
     'salad', 'vegetables', 'carrots', 'broccoli', 'spinach',
     'nuts', 'almonds', 'walnuts', 'peanuts',
-    'chocolate', 'candy', 'cake', 'cookie', 'ice cream'
+    'chocolate', 'candy', 'cake', 'cookie', 'ice cream', 'ice',
+    'briyani', 'biryani', 'curry', 'dal', 'roti', 'naan'
   ];
 
   // Check for food items
+  const foundFoods = [];
   for (const food of foodItems) {
     if (lowerText.includes(food)) {
-      data.food = food;
-      data.description = `Had ${food}`;
-      break;
+      foundFoods.push(food);
+    }
+  }
+  
+  if (foundFoods.length > 0) {
+    data.food = foundFoods.join(', ');
+    data.description = `Had ${foundFoods.join(', ')}`;
+  }
+
+  // If no specific food found, try to extract food-related phrases
+  if (!data.food) {
+    // Look for patterns like "had X", "ate X", "drank X"
+    const foodPatterns = [
+      /(?:had|ate|drank|consumed)\s+([^,.\s]+(?:\s+[^,.\s]+)*)/gi,
+      /(?:for\s+)(breakfast|lunch|dinner|snack)/gi
+    ];
+    
+    for (const pattern of foodPatterns) {
+      const match = pattern.exec(lowerText);
+      if (match) {
+        data.food = match[1] || match[0];
+        data.description = `Had ${data.food}`;
+        break;
+      }
     }
   }
 
@@ -86,17 +109,30 @@ export const extractFoodData = (text) => {
  */
 export const isFoodRelated = (text) => {
   if (!text || typeof text !== 'string') {
+    console.log('❌ FoodDataExtractor: Invalid text input');
     return false;
   }
 
   const lowerText = text.toLowerCase().trim();
+  console.log('🔍 FoodDataExtractor: Checking text:', lowerText);
   
   const foodKeywords = [
     'food', 'meal', 'eat', 'ate', 'eating', 'hungry', 'breakfast', 'lunch', 'dinner',
-    'snack', 'diet', 'nutrition', 'calories', 'protein', 'carbs', 'fat',
+    'snack', 'snacks', 'diet', 'nutrition', 'calories', 'protein', 'carbs', 'fat',
     'apple', 'banana', 'bread', 'chicken', 'pizza', 'pasta', 'rice', 'salad',
-    'coffee', 'tea', 'water', 'juice', 'milk', 'cheese', 'yogurt'
+    'coffee', 'tea', 'water', 'juice', 'milk', 'cheese', 'yogurt', 'briyani',
+    'ice cream', 'ice', 'chocolate', 'cake', 'cookie', 'candy'
   ];
 
-  return foodKeywords.some(keyword => lowerText.includes(keyword));
+  const foundKeywords = foodKeywords.filter(keyword => {
+    // Use word boundary regex for more precise matching
+    const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+    return regex.test(lowerText);
+  });
+  console.log('🍽️ FoodDataExtractor: Found keywords:', foundKeywords);
+  
+  const isRelated = foundKeywords.length > 0;
+  console.log('🍽️ FoodDataExtractor: Is food related:', isRelated);
+  
+  return isRelated;
 };

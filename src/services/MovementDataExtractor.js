@@ -27,22 +27,31 @@ export const extractMovementData = (text) => {
 
   const lowerText = text.toLowerCase().trim();
   
-  // Extract exercise types
+  // Extract exercise types (removed walking - it goes to Activity)
   const exerciseTypes = [
-    'running', 'jogging', 'walking', 'cycling', 'biking', 'swimming',
+    'running', 'jogging', 'cycling', 'biking', 'swimming',
     'gym', 'weightlifting', 'lifting', 'yoga', 'pilates', 'dancing',
     'hiking', 'climbing', 'tennis', 'basketball', 'football', 'soccer',
     'boxing', 'martial arts', 'karate', 'taekwondo', 'kickboxing',
-    'aerobics', 'zumba', 'crossfit', 'hiit', 'cardio', 'strength training'
+    'aerobics', 'zumba', 'crossfit', 'hiit', 'cardio', 'strength training',
+    'sit to stand', 'sit-to-stand', 'sit ups', 'push ups', 'squats'
   ];
 
   // Check for exercise types
+  const foundExercises = [];
   for (const exercise of exerciseTypes) {
     if (lowerText.includes(exercise)) {
-      data.exercise = exercise;
-      data.description = `Did ${exercise}`;
-      break;
+      foundExercises.push(exercise);
     }
+  }
+  
+  if (foundExercises.length > 0) {
+    data.exercise = foundExercises.join(', ');
+    data.description = `Did ${foundExercises.join(', ')}`;
+  } else if (lowerText.includes('exercise')) {
+    // If just "exercise" is mentioned, extract it
+    data.exercise = 'exercise';
+    data.description = 'Completed exercise';
   }
 
   // Extract duration
@@ -51,7 +60,7 @@ export const extractMovementData = (text) => {
     data.duration = parseInt(durationMatch[1]);
     data.unit = durationMatch[2];
     if (data.exercise) {
-      data.description = `Did ${exercise} for ${durationMatch[0]}`;
+      data.description = `Did ${data.exercise} for ${durationMatch[0]}`;
     }
   }
 
@@ -89,18 +98,31 @@ export const extractMovementData = (text) => {
  */
 export const isMovementRelated = (text) => {
   if (!text || typeof text !== 'string') {
+    console.log('❌ MovementDataExtractor: Invalid text input');
     return false;
   }
 
   const lowerText = text.toLowerCase().trim();
+  console.log('🔍 MovementDataExtractor: Checking text:', lowerText);
   
   const movementKeywords = [
-    'exercise', 'workout', 'training', 'fitness', 'gym', 'sport', 'sports',
-    'running', 'walking', 'cycling', 'swimming', 'yoga', 'pilates', 'dancing',
+    'exercise', 'exercises', 'workout', 'training', 'fitness', 'gym', 'sport', 'sports',
+    'running', 'cycling', 'swimming', 'yoga', 'pilates', 'dancing',
     'hiking', 'climbing', 'tennis', 'basketball', 'football', 'soccer',
     'boxing', 'martial arts', 'aerobics', 'zumba', 'crossfit', 'hiit',
-    'cardio', 'strength', 'weightlifting', 'lifting', 'muscle', 'muscles'
+    'cardio', 'strength', 'weightlifting', 'lifting', 'muscle', 'muscles',
+    'sit to stand', 'sit-to-stand', 'completed', 'did', 'performed'
   ];
 
-  return movementKeywords.some(keyword => lowerText.includes(keyword));
+  const foundKeywords = movementKeywords.filter(keyword => {
+    // Use word boundary regex for more precise matching
+    const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+    return regex.test(lowerText);
+  });
+  console.log('💪 MovementDataExtractor: Found keywords:', foundKeywords);
+  
+  const isRelated = foundKeywords.length > 0;
+  console.log('💪 MovementDataExtractor: Is movement related:', isRelated);
+  
+  return isRelated;
 };
