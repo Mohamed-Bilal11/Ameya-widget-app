@@ -27,9 +27,8 @@ export const extractFoodData = (text) => {
 
   const lowerText = text.toLowerCase().trim();
   
-  // Extract food items
+  // Extract food items (specific foods, not meal types)
   const foodItems = [
-    'breakfast', 'lunch', 'dinner', 'snack', 'snacks', 'meal',
     'apple', 'banana', 'orange', 'grapes', 'strawberry',
     'bread', 'toast', 'sandwich', 'pizza', 'pasta',
     'rice', 'chicken', 'beef', 'fish', 'salmon',
@@ -37,21 +36,22 @@ export const extractFoodData = (text) => {
     'coffee', 'tea', 'water', 'juice', 'soda',
     'salad', 'vegetables', 'carrots', 'broccoli', 'spinach',
     'nuts', 'almonds', 'walnuts', 'peanuts',
-    'chocolate', 'candy', 'cake', 'cookie', 'ice cream', 'ice',
-    'briyani', 'biryani', 'curry', 'dal', 'roti', 'naan'
+    'chocolate', 'candy', 'cake', 'cookie', 'ice cream',
+    'briyani', 'biryani', 'curry', 'dal', 'roti', 'naan', 'idli'
   ];
 
-  // Check for food items
+  // Check for food items (using word boundaries for accurate matching)
   const foundFoods = [];
   for (const food of foodItems) {
-    if (lowerText.includes(food)) {
+    // Use word boundary regex to avoid partial matches (e.g., "ice" shouldn't match in "juice")
+    const regex = new RegExp(`\\b${food.replace(/\s+/g, '\\s+')}\\b`, 'i');
+    if (regex.test(lowerText)) {
       foundFoods.push(food);
     }
   }
   
   if (foundFoods.length > 0) {
     data.food = foundFoods.join(', ');
-    data.description = `Had ${foundFoods.join(', ')}`;
   }
 
   // If no specific food found, try to extract food-related phrases
@@ -66,39 +66,44 @@ export const extractFoodData = (text) => {
       const match = pattern.exec(lowerText);
       if (match) {
         data.food = match[1] || match[0];
-        data.description = `Had ${data.food}`;
         break;
       }
     }
   }
 
-  // Extract quantities
+  // Extract quantities (with context awareness)
   const quantityMatch = lowerText.match(/(\d+(?:\.\d+)?)\s*(?:cups?|bowls?|plates?|pieces?|slices?|servings?|grams?|kg|pounds?|lbs?|ounces?|oz)/);
   if (quantityMatch) {
-    data.quantity = parseFloat(quantityMatch[1]);
-    data.unit = quantityMatch[2];
-    if (data.food) {
-      data.description = `Had ${quantityMatch[0]} of ${data.food}`;
+    // Check if this quantity is in an exercise context (e.g., "lifted 2kg", "pressed 50kg")
+    const exerciseContextWords = ['lifted', 'lift', 'press', 'pressed', 'raised', 'raise', 'bench', 'squat', 'deadlift'];
+    const matchIndex = lowerText.indexOf(quantityMatch[0]);
+    const contextBefore = lowerText.substring(Math.max(0, matchIndex - 20), matchIndex);
+    
+    // Check if any exercise words appear before the quantity
+    const isExerciseContext = exerciseContextWords.some(word => contextBefore.includes(word));
+    
+    if (!isExerciseContext) {
+      // Only extract quantity if it's NOT in an exercise context
+      data.quantity = parseFloat(quantityMatch[1]);
+      data.unit = quantityMatch[2];
+    } else {
+      console.log('🍽️ FoodDataExtractor: Skipping quantity in exercise context:', quantityMatch[0]);
     }
   }
 
   // Extract meal types
   const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'snacks', 'brunch'];
   for (const meal of mealTypes) {
-    if (lowerText.includes(meal)) {
+    const mealRegex = new RegExp(`\\b${meal}\\b`, 'i');
+    if (mealRegex.test(lowerText)) {
       // Convert 'snack' to 'snacks' for consistency
       data.meal = meal === 'snack' ? 'snacks' : meal;
-      if (!data.description) {
-        data.description = `Had ${data.meal}`;
-      }
       break;
     }
   }
 
-  // If no specific food found, use the original text
-  if (!data.food && !data.meal) {
-    data.description = text;
-  }
+  // Always use the original user's text as description to preserve detail
+  data.description = text;
 
   return data;
 };

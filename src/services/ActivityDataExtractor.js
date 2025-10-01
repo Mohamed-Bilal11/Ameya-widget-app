@@ -33,7 +33,8 @@ export const extractActivityData = (text) => {
     data.type = 'steps';
     data.value = parseInt(stepsMatch[1]);
     data.unit = 'steps';
-    data.description = `Walked ${stepsMatch[1]} steps`;
+    data.description = text; // Use original user text
+    return data;
   }
 
   // Extract heart rate data (smartwatch health metric)
@@ -42,7 +43,8 @@ export const extractActivityData = (text) => {
     data.type = 'heart_rate';
     data.value = parseInt(heartRateMatch[1]);
     data.unit = 'bpm';
-    data.description = `Heart rate: ${heartRateMatch[1]} bpm`;
+    data.description = text; // Use original user text
+    return data;
   }
 
   // Extract calories burned (smartwatch health metric)
@@ -51,7 +53,8 @@ export const extractActivityData = (text) => {
     data.type = 'calories';
     data.value = parseInt(caloriesMatch[1]);
     data.unit = 'calories';
-    data.description = `Burned ${caloriesMatch[1]} calories`;
+    data.description = text; // Use original user text
+    return data;
   }
 
   // Extract walking distance (smartwatch health metric)
@@ -60,7 +63,8 @@ export const extractActivityData = (text) => {
     data.type = 'distance';
     data.value = parseFloat(distanceMatch[1]);
     data.unit = distanceMatch[2];
-    data.description = `Walked ${distanceMatch[0]}`;
+    data.description = text; // Use original user text
+    return data;
   }
 
   // Extract sleep data (smartwatch health metric)
@@ -69,14 +73,14 @@ export const extractActivityData = (text) => {
     data.type = 'sleep';
     data.value = parseInt(sleepMatch[1]);
     data.unit = 'hours';
-    data.description = `Slept ${sleepMatch[1]} hours`;
+    data.description = text; // Use original user text
     return data;
   }
 
   // Extract general health metrics
   if (lowerText.includes('walking') || lowerText.includes('walked') || lowerText.includes('walk')) {
     data.type = 'walking';
-    data.description = 'Walking activity recorded';
+    data.description = text; // Use original user text
     return data;
   }
 
@@ -94,25 +98,25 @@ export const extractActivityData = (text) => {
         data.type = 'distance';
         data.value = parseFloat(match[1]);
         data.unit = 'km';
-        data.description = `Walked ${match[1]} km`;
+        data.description = text; // Use original user text
         return data;
       } else if (pattern.source.includes('burned')) {
         data.type = 'calories';
         data.value = parseInt(match[1]);
         data.unit = 'calories';
-        data.description = `Burned ${match[1]} calories`;
+        data.description = text; // Use original user text
         return data;
       } else if (pattern.source.includes('steps')) {
         data.type = 'steps';
         data.value = parseInt(match[1]);
         data.unit = 'steps';
-        data.description = `Walked ${match[1]} steps`;
+        data.description = text; // Use original user text
         return data;
       }
     }
   }
 
-  // If no specific data found, return the original text as description
+  // Always use the original text as description
   data.description = text;
   return data;
 };
