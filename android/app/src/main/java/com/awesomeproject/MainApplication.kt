@@ -16,7 +16,7 @@ import android.os.Bundle
 import android.content.Intent
 import android.net.Uri
 import com.awesomeproject.IntentLauncherModule
-
+import com.awesomeproject.SpeechRecognizerPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -26,6 +26,7 @@ class MainApplication : Application(), ReactApplication {
     val packages = PackageList(this).packages.toMutableList() 
     packages.add(WidgetUpdaterPackage()) 
     packages.add(IntentLauncherPackage())
+    packages.add(SpeechRecognizerPackage())
     return packages
 }
 

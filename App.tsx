@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Linking } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation/NavigationService';
 
@@ -31,9 +32,11 @@ function App(): React.JSX.Element {
   }, []);
 
   return (
-    <PaperProvider>
-      <AppNavigator />
-    </PaperProvider>
+    <SafeAreaProvider>
+      <PaperProvider>
+        <AppNavigator />
+      </PaperProvider>
+    </SafeAreaProvider>
   );
 }
 
