@@ -212,8 +212,3 @@ This project is private and proprietary.
 
 ## 🤝 Contributing
 
-This is a private project. For questions or support, please contact the development team.
-
----
-
-**Built with ❤️ using React Native**
