@@ -79,7 +79,7 @@ export default function VoiceButton() {
       return;
     }
     
-    console.log('🎤 VoiceButton: Received speech result:', text, 'isFinal:', result?.isFinal);
+   // console.log('🎤 VoiceButton: Received speech result:', text, 'isFinal:', result?.isFinal);
     
     // Simply update transcription with the latest result
     const newTranscription = text.trim();

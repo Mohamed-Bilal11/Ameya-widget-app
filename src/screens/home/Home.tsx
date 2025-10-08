@@ -29,7 +29,7 @@ const Home: React.FC<Props> = ({ navigation }) => {
                 style={[styles.button, { backgroundColor: '#467267' }]}
                 labelStyle={styles.buttonLabel}
               >
-                🍽️ Food Logs
+                🍽️ Go to Food Logs
               </Button>
 
               <Button
@@ -38,7 +38,7 @@ const Home: React.FC<Props> = ({ navigation }) => {
                 style={[styles.button, { backgroundColor: '#4996F6' }]}
                 labelStyle={styles.buttonLabel}
               >
-                🧘 Movements
+                🧘 Go to Movements
               </Button>
 
               <Button
@@ -47,7 +47,7 @@ const Home: React.FC<Props> = ({ navigation }) => {
                 style={[styles.button, { backgroundColor: '#DB7670' }]}
                 labelStyle={styles.buttonLabel}
               >
-                🚶 Activity
+                🚶 Go to Activity
               </Button>
 
               <Button
@@ -56,7 +56,7 @@ const Home: React.FC<Props> = ({ navigation }) => {
                 style={[styles.button, { backgroundColor: '#7c3aed' }]}
                 labelStyle={styles.buttonLabel}
               >
-                💬 AI Chat
+                💬 Go to AI Chat
               </Button>
             </View>
           </Card>
