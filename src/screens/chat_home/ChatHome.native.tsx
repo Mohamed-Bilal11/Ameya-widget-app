@@ -52,7 +52,7 @@ class ChatHome extends Component<Props, State> {
   }
 
   onSpeechStart = () => {
-    console.log('onSpeechStart');
+    //console.log('onSpeechStart');
     this.setState({
       started: '√',
       recording: true,
@@ -161,7 +161,7 @@ class ChatHome extends Component<Props, State> {
           Press the button and start speaking.
         </Text>
         <Text style={styles.stat}>{`Recording: ${this.state.recording ? 'Yes' : 'No'}`}</Text>
-        <Text style={styles.stat}>{`Started: ${this.state.started}`}</Text>
+        <Text style={styles.stat}>{`Recording Started: ${this.state.started}`}</Text>
         <Text style={styles.stat}>{`Recognized: ${
           this.state.recognized
         }`}</Text>
