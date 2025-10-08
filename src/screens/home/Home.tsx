@@ -18,7 +18,7 @@ const Home: React.FC<Props> = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
-          <Text style={styles.title}>👋 Welcome Back!</Text>
+          <Text style={styles.title}>👋 Welcome User!</Text>
           <Text style={styles.subtitle}>Let's track your wellness journey</Text>
           <VoiceButton />
           <Card style={styles.card}>
