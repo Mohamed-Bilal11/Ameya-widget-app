@@ -87,7 +87,7 @@ export default function VoiceButton() {
     currentTranscriptionRef.current = newTranscription;
     
     // Debug logging
-    //console.log('🎤 VoiceButton: Updated transcription to:', newTranscription);
+    console.log('🎤 VoiceButton: Updated transcription to:', newTranscription);
   };
 
   const onSpeechErrorHandler = (error) => {
@@ -96,7 +96,7 @@ export default function VoiceButton() {
     // Don't immediately stop - let the Android module handle retries
     // Only stop if it's a critical error
     if (error && (error.includes('not authorized') || error.includes('permission'))) {
-      //console.log('🎤 Critical error, stopping recording');
+      console.log('🎤 Critical error, stopping recording');
       setLoading(false);
       setRecording(false);
     } else {
