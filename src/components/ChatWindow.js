@@ -11,11 +11,11 @@ const WaveAnimation = ({ isActive, colors = "from-cyan-400 to-blue-500" }) => {
   
   return (
     <div className="flex items-center justify-center gap-0.5 w-4 h-4">
-      <div className={`w-0.5 h-1 bg-gradient-to-t ${colors} rounded-full animate-wave-1`}></div>
-      <div className={`w-0.5 h-2 bg-gradient-to-t ${colors} rounded-full animate-wave-2`}></div>
-      <div className={`w-0.5 h-1.5 bg-gradient-to-t ${colors} rounded-full animate-wave-3`}></div>
-      <div className={`w-0.5 h-3 bg-gradient-to-t ${colors} rounded-full animate-wave-4`}></div>
-      <div className={`w-0.5 h-1 bg-gradient-to-t ${colors} rounded-full animate-wave-5`}></div>
+      <div className={`w-0.6 h-1 bg-gradient-to-t ${colors} rounded-full animate-wave-1`}></div>
+      <div className={`w-0.6 h-2 bg-gradient-to-t ${colors} rounded-full animate-wave-2`}></div>
+      <div className={`w-0.6 h-1.5 bg-gradient-to-t ${colors} rounded-full animate-wave-3`}></div>
+      <div className={`w-0.6 h-3 bg-gradient-to-t ${colors} rounded-full animate-wave-4`}></div>
+      <div className={`w-0.6 h-1 bg-gradient-to-t ${colors} rounded-full animate-wave-5`}></div>
     </div>
   );
 };
@@ -569,7 +569,7 @@ const ChatWindow = ({
         stopLocalAudio();
         
         // Add new AI response with typewriter effect
-        console.log("🎵 Adding AI response to chat");
+       // console.log("🎵 Adding AI response to chat");
         
         const aiResponse = addMessage({
           text: responseText,
