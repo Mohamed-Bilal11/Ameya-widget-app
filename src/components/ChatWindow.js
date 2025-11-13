@@ -447,6 +447,10 @@ const ChatWindow = ({
         console.log("🔇 AI finished speaking but user has muted - not resuming voice recording");
         setCurrentTranscript('');
       }
+      else {
+        console.log("🔇 AI finished speaking but user has not muted - not resuming voice recording");
+        setCurrentTranscript('');
+      }
     }
   }, [isAISpeaking, isOpen, isMuted, isProcessingVoice, isUserSpeaking, useWebSpeech, webSpeechSupported]);
 
