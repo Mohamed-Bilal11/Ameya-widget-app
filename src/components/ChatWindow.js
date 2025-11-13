@@ -1792,10 +1792,10 @@ const cleanup = () => {
     });
   };
   // eslint-disable-next-line no-unused-vars
-  const useTextInput = () => {
-    setShowMicError(false);
-    setConnectionStatus('connected');
-  };
+  // const useTextInput = () => {
+  //   setShowMicError(false);
+  //   setConnectionStatus('connected');
+  // };
   // eslint-disable-next-line no-unused-vars
   const retryAIProcessing = () => {
     setShowAIError(false);
