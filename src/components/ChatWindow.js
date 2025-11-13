@@ -1772,14 +1772,14 @@ const cleanup = () => {
 
   // Error recovery functions
     // eslint-disable-next-line no-unused-vars
-  const retryConnection = () => {
-    setShowConnectionError(false);
-    setConnectionStatus('connecting');
-    // Test connection and reset status
-    testBackendConnection().then((connected) => {
-      setConnectionStatus(connected ? 'connected' : 'error');
-    });
-  };
+  // const retryConnection = () => {
+  //   setShowConnectionError(false);
+  //   setConnectionStatus('connecting');
+  //   // Test connection and reset status
+  //   testBackendConnection().then((connected) => {
+  //     setConnectionStatus(connected ? 'connected' : 'error');
+  //   });
+  // };
 
     // eslint-disable-next-line no-unused-vars
   const retryMicrophone = () => {
