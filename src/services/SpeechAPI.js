@@ -168,36 +168,40 @@ export default {
   // Add listener for speech recognition results
   addResultListener: (callback) => {
     console.log('🎤 Adding result listener, Platform:', Platform.OS, 'speechEventEmitter:', !!speechEventEmitter);
-    if (Platform.OS === 'ios' && speechEventEmitter) {
-      const subscription = speechEventEmitter.addListener('onSpeechResult', (result) => {
-        console.log('🎤 iOS Result listener callback triggered:', result);
-        callback(result);
-        // Also call global callback if set
-        if (globalSpeechResultCallback) {
-          console.log('🎤 Calling global speech result callback');
-          globalSpeechResultCallback(result);
-        }
-      });
-      console.log('🎤 iOS Result listener added successfully');
-      return {
-        remove: () => subscription.remove()
-      };
-    } else if (Platform.OS === 'android' && speechEventEmitter) {
-      const subscription = speechEventEmitter.addListener('onSpeechResults', (result) => {
-        console.log('🎤 Android Result listener callback triggered:', result);
-        // Android sends the result as a string directly
-        const formattedResult = { text: result, isFinal: true };
-        callback(formattedResult);
-        // Also call global callback if set
-        if (globalSpeechResultCallback) {
-          console.log('🎤 Calling global speech result callback');
-          globalSpeechResultCallback(formattedResult);
-        }
-      });
-      console.log('🎤 Android Result listener added successfully');
-      return {
-        remove: () => subscription.remove()
-      };
+    if(speechEventEmitter){
+      if (Platform.OS === 'ios') {
+        const subscription = speechEventEmitter.addListener('onSpeechResult', (result) => {
+          console.log('🎤 iOS Result listener callback triggered:', result);
+          callback(result);
+          // Also call global callback if set
+          if (globalSpeechResultCallback) {
+            console.log('🎤 Calling global speech result callback');
+            globalSpeechResultCallback(result);
+          }
+        });
+        console.log('🎤 iOS Result listener added successfully');
+        return {
+          remove: () => subscription.remove()
+        };
+      } else if (Platform.OS === 'android') {
+        const subscription = speechEventEmitter.addListener('onSpeechResults', (result) => {
+          console.log('🎤 Android Result listener callback triggered:', result);
+          // Android sends the result as a string directly
+          const formattedResult = { text: result, isFinal: true };
+          callback(formattedResult);
+          // Also call global callback if set
+          if (globalSpeechResultCallback) {
+            console.log('🎤 Calling global speech result callback');
+            globalSpeechResultCallback(formattedResult);
+          }
+        });
+        console.log('🎤 Android Result listener added successfully');
+        return {
+          remove: () => subscription.remove()
+        };
+      }
+    } else {
+      console.log('🎤 SpeechEventEmitter not available');
     }
     // Return dummy listener for other platforms
     return { remove: () => {} };

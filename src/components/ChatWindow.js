@@ -11,11 +11,11 @@ const WaveAnimation = ({ isActive, colors = "from-cyan-400 to-blue-500" }) => {
   
   return (
     <div className="flex items-center justify-center gap-0.5 w-4 h-4">
-      <div className={`w-0.5 h-1 bg-gradient-to-t ${colors} rounded-full animate-wave-1`}></div>
-      <div className={`w-0.5 h-2 bg-gradient-to-t ${colors} rounded-full animate-wave-2`}></div>
-      <div className={`w-0.5 h-1.5 bg-gradient-to-t ${colors} rounded-full animate-wave-3`}></div>
-      <div className={`w-0.5 h-3 bg-gradient-to-t ${colors} rounded-full animate-wave-4`}></div>
-      <div className={`w-0.5 h-1 bg-gradient-to-t ${colors} rounded-full animate-wave-5`}></div>
+      <div className={`w-0.6 h-1 bg-gradient-to-t ${colors} rounded-full animate-wave-1`}></div>
+      <div className={`w-0.6 h-2 bg-gradient-to-t ${colors} rounded-full animate-wave-2`}></div>
+      <div className={`w-0.6 h-1.5 bg-gradient-to-t ${colors} rounded-full animate-wave-3`}></div>
+      <div className={`w-0.6 h-3 bg-gradient-to-t ${colors} rounded-full animate-wave-4`}></div>
+      <div className={`w-0.6 h-1 bg-gradient-to-t ${colors} rounded-full animate-wave-5`}></div>
     </div>
   );
 };
@@ -447,6 +447,10 @@ const ChatWindow = ({
         console.log("🔇 AI finished speaking but user has muted - not resuming voice recording");
         setCurrentTranscript('');
       }
+      else {
+        console.log("🔇 AI finished speaking but user has not muted - not resuming voice recording");
+        setCurrentTranscript('');
+      }
     }
   }, [isAISpeaking, isOpen, isMuted, isProcessingVoice, isUserSpeaking, useWebSpeech, webSpeechSupported]);
 
@@ -569,7 +573,7 @@ const ChatWindow = ({
         stopLocalAudio();
         
         // Add new AI response with typewriter effect
-        console.log("🎵 Adding AI response to chat");
+// Remove this line entirely
         
         const aiResponse = addMessage({
           text: responseText,
@@ -850,20 +854,7 @@ const playGreetingMessage = async () => {
 
   // Handle text input changes with typing detection
   // eslint-disable-next-line no-unused-vars
-  const handleTextInputChange = (e) => {
-    setInputText(e.target.value);
-    setIsUserTyping(true);
-    
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    
-    // Set new timeout to stop typing indicator
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsUserTyping(false);
-    }, 1000); // Stop typing indicator 1 second after last keystroke
-  };
+ 
 
   // Show all messages - simplified logic
   const messagesToShow = messages || [];
@@ -1781,14 +1772,14 @@ const cleanup = () => {
 
   // Error recovery functions
     // eslint-disable-next-line no-unused-vars
-  const retryConnection = () => {
-    setShowConnectionError(false);
-    setConnectionStatus('connecting');
-    // Test connection and reset status
-    testBackendConnection().then((connected) => {
-      setConnectionStatus(connected ? 'connected' : 'error');
-    });
-  };
+  // const retryConnection = () => {
+  //   setShowConnectionError(false);
+  //   setConnectionStatus('connecting');
+  //   // Test connection and reset status
+  //   testBackendConnection().then((connected) => {
+  //     setConnectionStatus(connected ? 'connected' : 'error');
+  //   });
+  // };
 
     // eslint-disable-next-line no-unused-vars
   const retryMicrophone = () => {
@@ -1801,75 +1792,75 @@ const cleanup = () => {
     });
   };
   // eslint-disable-next-line no-unused-vars
-  const useTextInput = () => {
-    setShowMicError(false);
-    setConnectionStatus('connected');
-  };
+  // const useTextInput = () => {
+  //   setShowMicError(false);
+  //   setConnectionStatus('connected');
+  // };
   // eslint-disable-next-line no-unused-vars
   const retryAIProcessing = () => {
     setShowAIError(false);
     setConnectionStatus('connected');
   };
   // eslint-disable-next-line no-unused-vars
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputText.trim() || isTyping || isProcessingAIRequest) return;
+  // const handleSendMessage = async (e) => {
+  //   e.preventDefault();
+  //   if (!inputText.trim() || isTyping || isProcessingAIRequest) return;
 
-    // Add user message
-    const userMessage = addMessage({
-      text: inputText,
-      isAI: false,
-      timestamp: new Date()
-    });
+  //   // Add user message
+  //   const userMessage = addMessage({
+  //     text: inputText,
+  //     isAI: false,
+  //     timestamp: new Date()
+  //   });
 
-    setCurrentUserMessageId(userMessage.id);
-    const messageText = inputText;
-    setInputText('');
-    setIsTyping(true);
-    setIsProcessingAIRequest(true);
+  //   setCurrentUserMessageId(userMessage.id);
+  //   const messageText = inputText;
+  //   setInputText('');
+  //   setIsTyping(true);
+  //   setIsProcessingAIRequest(true);
 
-    try {
-      // Send message via WebSocket session service
-      console.log("Sending message via WebSocket...");
+  //   try {
+  //     // Send message via WebSocket session service
+  //     console.log("Sending message via WebSocket...");
       
-      if (sessionService && sessionService.isConnected) {
-        sessionService.sendMessage(messageText);
-        // The AI response will be handled by the WebSocket message handler
-        // No need to add a placeholder message here
-      } else {
-        // WebSocket not available - show error
-        console.log("WebSocket not available");
-        throw new Error("WebSocket connection not available");
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
+  //     if (sessionService && sessionService.isConnected) {
+  //       sessionService.sendMessage(messageText);
+  //       // The AI response will be handled by the WebSocket message handler
+  //       // No need to add a placeholder message here
+  //     } else {
+  //       // WebSocket not available - show error
+  //       console.log("WebSocket not available");
+  //       throw new Error("WebSocket connection not available");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error sending message:", error);
       
-      let errorText = "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.";
+  //     let errorText = "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.";
       
-      if (error.response?.status === 400) {
-        errorText = "Sorry, there seems to be a configuration issue. The service may not be fully set up yet.";
-      } else if (error.response?.status === 500) {
-        errorText = "The AI service is temporarily unavailable. Please try again in a moment.";
-      }
+  //     if (error.response?.status === 400) {
+  //       errorText = "Sorry, there seems to be a configuration issue. The service may not be fully set up yet.";
+  //     } else if (error.response?.status === 500) {
+  //       errorText = "The AI service is temporarily unavailable. Please try again in a moment.";
+  //     }
       
-      // Add error message with typewriter effect
-      const errorResponse = addMessage({
-        text: errorText,
-        isAI: true,
-        timestamp: new Date(),
-        isTypewriter: true,
-        isGreeting: false
-      });
-      setTypewriterMessageId(errorResponse.id);
+  //     // Add error message with typewriter effect
+  //     const errorResponse = addMessage({
+  //       text: errorText,
+  //       isAI: true,
+  //       timestamp: new Date(),
+  //       isTypewriter: true,
+  //       isGreeting: false
+  //     });
+  //     setTypewriterMessageId(errorResponse.id);
       
-      // Play error response audio using browser TTS
-      tryBrowserTTS(errorText, errorResponse.id);
-    } finally {
-      setIsTyping(false);
-      setCurrentUserMessageId(null);
-      setIsProcessingAIRequest(false);
-    }
-  };
+  //     // Play error response audio using browser TTS
+  //     tryBrowserTTS(errorText, errorResponse.id);
+  //   } finally {
+  //     setIsTyping(false);
+  //     setCurrentUserMessageId(null);
+  //     setIsProcessingAIRequest(false);
+  //   }
+  // };
 
   // Handle mute/unmute functionality
   const handleMuteToggle = () => {
@@ -1995,9 +1986,9 @@ const cleanup = () => {
 
   // Helper function to send AI greeting when conversation starts (removed - using WebSocket)
   // eslint-disable-next-line no-unused-vars
-  const sendAIGreeting = async () => {
-    console.log("AI greeting handled via WebSocket");
-  };
+  // const sendAIGreeting = async () => {
+  //   console.log("AI greeting handled via WebSocket");
+  // };
 
   // Streaming disabled - this function is no longer used
   // const handleStreamingAIResponse = (response) => {

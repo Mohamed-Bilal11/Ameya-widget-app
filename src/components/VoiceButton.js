@@ -167,12 +167,12 @@ export default function VoiceButton() {
       console.log('🧭 Navigating to Activity');
       navigation.navigate('Activity');
     } else if (hasMovement) {
-      console.log('🧭 Navigating to Movements');
-      console.log('🧭 Navigation object:', navigation);
+      //console.log('🧭 Navigating to Movements');
+      //console.log('🧭 Navigation object:', navigation);
       navigation.navigate('Movements');
       console.log('🧭 Navigation call completed');
     } else if (hasChat) {
-      console.log('🧭 Navigating to ChatHome');
+      //console.log('🧭 Navigating to ChatHome');
       navigation.navigate('ChatHome');
     } else {
       console.log('🧭 No keywords found, navigating to Home (default)');
