@@ -1802,65 +1802,65 @@ const cleanup = () => {
     setConnectionStatus('connected');
   };
   // eslint-disable-next-line no-unused-vars
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputText.trim() || isTyping || isProcessingAIRequest) return;
+  // const handleSendMessage = async (e) => {
+  //   e.preventDefault();
+  //   if (!inputText.trim() || isTyping || isProcessingAIRequest) return;
 
-    // Add user message
-    const userMessage = addMessage({
-      text: inputText,
-      isAI: false,
-      timestamp: new Date()
-    });
+  //   // Add user message
+  //   const userMessage = addMessage({
+  //     text: inputText,
+  //     isAI: false,
+  //     timestamp: new Date()
+  //   });
 
-    setCurrentUserMessageId(userMessage.id);
-    const messageText = inputText;
-    setInputText('');
-    setIsTyping(true);
-    setIsProcessingAIRequest(true);
+  //   setCurrentUserMessageId(userMessage.id);
+  //   const messageText = inputText;
+  //   setInputText('');
+  //   setIsTyping(true);
+  //   setIsProcessingAIRequest(true);
 
-    try {
-      // Send message via WebSocket session service
-      console.log("Sending message via WebSocket...");
+  //   try {
+  //     // Send message via WebSocket session service
+  //     console.log("Sending message via WebSocket...");
       
-      if (sessionService && sessionService.isConnected) {
-        sessionService.sendMessage(messageText);
-        // The AI response will be handled by the WebSocket message handler
-        // No need to add a placeholder message here
-      } else {
-        // WebSocket not available - show error
-        console.log("WebSocket not available");
-        throw new Error("WebSocket connection not available");
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
+  //     if (sessionService && sessionService.isConnected) {
+  //       sessionService.sendMessage(messageText);
+  //       // The AI response will be handled by the WebSocket message handler
+  //       // No need to add a placeholder message here
+  //     } else {
+  //       // WebSocket not available - show error
+  //       console.log("WebSocket not available");
+  //       throw new Error("WebSocket connection not available");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error sending message:", error);
       
-      let errorText = "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.";
+  //     let errorText = "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.";
       
-      if (error.response?.status === 400) {
-        errorText = "Sorry, there seems to be a configuration issue. The service may not be fully set up yet.";
-      } else if (error.response?.status === 500) {
-        errorText = "The AI service is temporarily unavailable. Please try again in a moment.";
-      }
+  //     if (error.response?.status === 400) {
+  //       errorText = "Sorry, there seems to be a configuration issue. The service may not be fully set up yet.";
+  //     } else if (error.response?.status === 500) {
+  //       errorText = "The AI service is temporarily unavailable. Please try again in a moment.";
+  //     }
       
-      // Add error message with typewriter effect
-      const errorResponse = addMessage({
-        text: errorText,
-        isAI: true,
-        timestamp: new Date(),
-        isTypewriter: true,
-        isGreeting: false
-      });
-      setTypewriterMessageId(errorResponse.id);
+  //     // Add error message with typewriter effect
+  //     const errorResponse = addMessage({
+  //       text: errorText,
+  //       isAI: true,
+  //       timestamp: new Date(),
+  //       isTypewriter: true,
+  //       isGreeting: false
+  //     });
+  //     setTypewriterMessageId(errorResponse.id);
       
-      // Play error response audio using browser TTS
-      tryBrowserTTS(errorText, errorResponse.id);
-    } finally {
-      setIsTyping(false);
-      setCurrentUserMessageId(null);
-      setIsProcessingAIRequest(false);
-    }
-  };
+  //     // Play error response audio using browser TTS
+  //     tryBrowserTTS(errorText, errorResponse.id);
+  //   } finally {
+  //     setIsTyping(false);
+  //     setCurrentUserMessageId(null);
+  //     setIsProcessingAIRequest(false);
+  //   }
+  // };
 
   // Handle mute/unmute functionality
   const handleMuteToggle = () => {
