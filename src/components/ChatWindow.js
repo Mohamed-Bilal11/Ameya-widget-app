@@ -1986,9 +1986,9 @@ const cleanup = () => {
 
   // Helper function to send AI greeting when conversation starts (removed - using WebSocket)
   // eslint-disable-next-line no-unused-vars
-  const sendAIGreeting = async () => {
-    console.log("AI greeting handled via WebSocket");
-  };
+  // const sendAIGreeting = async () => {
+  //   console.log("AI greeting handled via WebSocket");
+  // };
 
   // Streaming disabled - this function is no longer used
   // const handleStreamingAIResponse = (response) => {
