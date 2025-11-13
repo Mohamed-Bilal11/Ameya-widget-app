@@ -569,7 +569,7 @@ const ChatWindow = ({
         stopLocalAudio();
         
         // Add new AI response with typewriter effect
-       // console.log("🎵 Adding AI response to chat");
+// Remove this line entirely
         
         const aiResponse = addMessage({
           text: responseText,
