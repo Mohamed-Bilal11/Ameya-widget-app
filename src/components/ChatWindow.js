@@ -854,20 +854,7 @@ const playGreetingMessage = async () => {
 
   // Handle text input changes with typing detection
   // eslint-disable-next-line no-unused-vars
-  const handleTextInputChange = (e) => {
-    setInputText(e.target.value);
-    setIsUserTyping(true);
-    
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    
-    // Set new timeout to stop typing indicator
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsUserTyping(false);
-    }, 1000); // Stop typing indicator 1 second after last keystroke
-  };
+ 
 
   // Show all messages - simplified logic
   const messagesToShow = messages || [];
